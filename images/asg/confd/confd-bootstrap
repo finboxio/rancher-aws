@@ -1,0 +1,7 @@
+#! /bin/bash
+
+if [[ ! -e /etc/haproxy/haproxy.cfg ]]; then
+  cp /etc/confd/default/haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
+fi
+
+confd $@

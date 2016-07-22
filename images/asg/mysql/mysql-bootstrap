@@ -1,0 +1,118 @@
+#! /bin/bash
+set -eo pipefail
+
+DATA_DIR=${DATA_DIR:-/etc/mysql/data}
+
+mkdir -p /var/run/mysqld || true
+
+echo 'Waiting for all autoscaling nodes to come online'
+self=$(ec2-ip)
+ips=($(asg-ips))
+
+valid=0
+total=0
+primary=
+advanced=${ips[0]}
+commits=0
+for ip in "${ips[@]}"; do
+  if [[ "$ip" != "$self" ]]; then
+    total=$((total + 1))
+    if mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "select 1" &> /dev/null; then
+      valid=$((valid + 1))
+      status=$(mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_cluster_status';")
+      commit=$(mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_last_committed';")
+      if [[ "$status" == "Primary" ]]; then primary=$ip; fi
+      if [[ "$commit" -gt "$commits" ]]; then advanced=$ip; commits=$commit; fi
+    fi
+  fi
+done
+
+if [[ "$primary" != "" ]]; then
+  # If there's a primary, just connect to it
+  echo "Connecting to cluster gcomm://$(echo $ips | tr ' ' ',')"
+  mysqld --wsrep_cluster_address gcomm://$(echo $ips | tr ' ' ',')
+elif [[ "$valid" == "0" &&  "$self" == "${ips[0]}" ]]; then
+  # Nobody's online yet. We're the oldest so we should bootstrap.
+  echo "Bootstrapping initial cluster"
+  # Initialize the database
+  if [ ! -d "$DATA_DIR/mysql" ]; then
+    if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+      echo >&2 'error: database is uninitialized and password option is not specified '
+      echo >&2 '  You need to specify MYSQL_ROOT_PASSWORD'
+      exit 1
+    fi
+
+    mkdir -p "$DATA_DIR"
+
+    echo 'Initializing database'
+    mysql_install_db --datadir="$DATA_DIR" --rpm
+    echo 'Database initialized'
+
+    mysqld --skip-networking &
+    pid="$!"
+
+    mysql=( mysql --protocol=socket -uroot )
+
+    for i in {30..0}; do
+      if echo 'SELECT 1' | "${mysql[@]}" &> /dev/null; then
+        break
+      fi
+      echo 'MySQL init process in progress...'
+      sleep 1
+    done
+
+    if [ "$i" = 0 ]; then
+      echo >&2 'MySQL init process failed.'
+      exit 1
+    fi
+
+    "${mysql[@]}" <<-EOSQL
+      -- What's done in this file shouldn't be replicated
+      --  or products like mysql-fabric won't work
+      SET @@SESSION.SQL_LOG_BIN=0;
+      DELETE FROM mysql.user ;
+      CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
+      GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
+      DROP DATABASE IF EXISTS test ;
+      FLUSH PRIVILEGES ;
+EOSQL
+
+    if [ ! -z "$MYSQL_ROOT_PASSWORD" ]; then
+      mysql+=( -p"${MYSQL_ROOT_PASSWORD}" )
+    fi
+
+    if [ "$MYSQL_DATABASE" ]; then
+      echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
+      mysql+=( "$MYSQL_DATABASE" )
+    fi
+
+    if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
+      echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
+
+      if [ "$MYSQL_DATABASE" ]; then
+        echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+      fi
+
+      echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
+    fi
+
+    if ! kill -s TERM "$pid" || ! wait "$pid"; then
+      echo >&2 'MySQL init process failed.'
+      exit 1
+    fi
+
+    echo
+    echo 'MySQL init process done. Ready for start up.'
+    echo
+  fi
+  mysqld --wsrep-new-cluster --wsrep_cluster_address gcomm://
+elif [[ "$valid" -gt "0" && "$valid" -eq "$total" ]]; then
+  # All other nodes are available but we've lost quorum.
+  # Pick the most advanced node to re-bootstrap and try to connect
+  mysql $advanced -u root -p$MYSQL_ROOT_PASSWORD -sse "SET GLOBAL wsrep_provider_options='pc.bootstrap=YES';"
+  mysqld --wsrep_cluster_address gcomm://$(echo $ips | tr ' ' ',')
+else
+  echo 'MySQL bootstrap failed. Exiting in 10s'
+  sleep 10
+  exit 1
+fi

@@ -1,0 +1,4 @@
+#! /bin/bash
+cp /etc/terminator/service /etc/xinetd.d/terminator
+echo "terminator 9999/tcp" >> /etc/services
+/usr/sbin/xinetd -dontfork

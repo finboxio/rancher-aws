@@ -1,0 +1,15 @@
+# default: on
+# description: terminator
+service terminator
+{
+    flags           = REUSE
+    socket_type     = stream
+    port            = 9999
+    wait            = no
+    user            = root
+    server          = /usr/bin/terminator
+    log_on_failure  += USERID
+    disable         = no
+    only_from       = 0.0.0.0/0
+    per_source      = UNLIMITED
+}

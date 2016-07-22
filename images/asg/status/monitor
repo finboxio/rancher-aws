@@ -1,0 +1,175 @@
+#! /bin/bash
+
+CREDENTIALS_FILE=${CREDENTIALS_FILE?"CREDENTIALS_FILE must be set"}
+CLUSTER_CAPACITY=${CLUSTER_CAPACITY?"CLUSTER_CAPACITY must be set"}
+MYSQL_USER=${MYSQL_USER?"MYSQL_USER must be set"}
+MYSQL_PASSWORD=${MYSQL_PASSWORD?"MYSQL_PASSWORD must be set"}
+EXTERNAL_RANCHER_HOST=${EXTERNAL_RANCHER_HOST?"EXTERNAL_RANCHER_HOST must be set"}
+
+PUBLIC_IP=$(dig +short myip.opendns.com @resolver2.opendns.com)
+CHECK_INTERVAL=${CHECK_INTERVAL:-10}
+ALERT_INTERVAL=${ALERT_INTERVAL:-300}
+SERF_CONTAINER=${SERF_CONTAINER:-serf}
+MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
+ETCD_PORT=${ETCD_PORT:-2379}
+MYSQLCHK_PORT=${MYSQLCHK_PORT:-9200}
+RANCHER_PORT=${RANCHER_PORT:-80}
+HAPROXY_MYSQL_PORT=${HAPROXY_MYSQL_PORT:-3307}
+
+UNHEALTHY_SIZE=1
+UNHEALTHY_ETCD=1
+UNHEALTHY_ETCD_LEADER=1
+UNHEALTHY_MYSQL=1
+UNHEALTHY_MYSQL_LEADER=1
+UNHEALTHY_RANCHER=1
+UNHEALTHY_HAPROXY_MYSQL=1
+UNHEALTHY_DNS_HTTP=1
+UNHEALTHY_DNS_HTTPS=1
+
+first_time="true"
+new_pass=
+passed=
+pass=
+fail=
+function check_health () {
+  unhealthy=$1
+  healthy=$(test "$unhealthy" -eq 0 && echo "true")
+  if [[ "$healthy" != "true" && "$passed" == "true" ]]; then
+    unhealthy=0
+    new_pass="true"
+    echo "Host $PUBLIC_IP says that $pass" | slack -p -a "good" &> /dev/null
+  elif [[ "$passed" != "true" ]]; then
+    unhealthy=$((unhealthy + CHECK_INTERVAL))
+    if [[ "$unhealthy" -ge "$ALERT_INTERVAL" ]]; then
+      unhealthy=$CHECK_INTERVAL
+    fi
+  fi
+
+  if [[ "$unhealthy" -gt "0" && "$unhealthy" -le "$CHECK_INTERVAL" ]]; then
+    echo "Host $PUBLIC_IP says that $fail" | slack -p -a "danger" &> /dev/null
+  fi
+  echo $unhealthy
+}
+
+healthy_streak=0
+while true; do
+  new_pass="false"
+  fail_count=0
+
+  # Is cluster at full capacity?
+  serf_members=$(docker exec $SERF_CONTAINER serf members -format json | jq '.members[] | select(.status == "alive")' | jq -s length)
+  pass="the rancher server pool is now at full capacity ($serf_members of $CLUSTER_CAPACITY online)"
+  fail="the rancher server pool is running at reduced capacity ($serf_members of $CLUSTER_CAPACITY online)"
+  passed=$(test "$serf_members" -ge "$CLUSTER_CAPACITY" && echo "true")
+  UNHEALTHY_SIZE=$(check_health $UNHEALTHY_SIZE)
+  if [[ "$UNHEALTHY_SIZE" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  # Is etcd healthy?
+  pass="its local etcd instance is now healthy"
+  fail="its local etcd instance is unhealthy"
+  passed=$(curl -sf --max-time 2 http://localhost:$ETCD_PORT/health | jq -r .health)
+  UNHEALTHY_ETCD=$(check_health $UNHEALTHY_ETCD)
+  if [[ "$UNHEALTHY_ETCD" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  if [[ "$UNHEALTHY_ETCD" -eq 0 ]]; then
+    # Does etcd have a leader?
+    leader=$(curl -sf --max-time 2 http://localhost:$ETCD_PORT/v2/keys/leader | jq -r .node.value)
+    pass="the etcd cluster has elected a new leader ($leader)"
+    fail="the etcd cluster has no leader"
+    passed=$(test "$leader" != "" && echo "true")
+    UNHEALTHY_ETCD_LEADER=$(check_health $UNHEALTHY_ETCD_LEADER)
+  else
+    UNHEALTHY_ETCD_LEADER=1
+  fi
+  if [[ "$UNHEALTHY_ETCD_LEADER" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  # Is mysql healthy?
+  pass="its local mysql instance is now healthy"
+  fail="its local mysql instance is unhealthy"
+  passed=$(curl -sf --max-time 2 http://localhost:$MYSQLCHK_PORT &> /dev/null && echo "true")
+  UNHEALTHY_MYSQL=$(check_health $UNHEALTHY_MYSQL)
+  if [[ "$UNHEALTHY_MYSQL" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  if [[ "$UNHEALTHY_ETCD_LEADER" -eq 0 ]]; then
+    # Is mysql reachable via haproxy?
+    pass="the mysql leader is now reachable via haproxy"
+    fail="the mysql leader is unreachable via haproxy"
+    passed=$(docker exec $MYSQL_CONTAINER mysql --protocol tcp --host localhost --port $HAPROXY_MYSQL_PORT --user $MYSQL_USER -p$MYSQL_PASSWORD -sse "select 'true';")
+    UNHEALTHY_HAPROXY_MYSQL=$(check_health $UNHEALTHY_HAPROXY_MYSQL)
+  else
+    UNHEALTHY_HAPROXY_MYSQL=1
+  fi
+  if [[ "$UNHEALTHY_HAPROXY_MYSQL" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  if [[ "$UNHEALTHY_HAPROXY_MYSQL" -eq 0 ]]; then
+    # Are all servers routing to the same mysql instance?
+    leaders=$(docker exec $SERF_CONTAINER serf members -format json \
+      | jq -r '.members[] | select(.status == "alive") | .addr' \
+      | cut -d: -f1 \
+      | xargs -I{} -0 docker exec $MYSQL_CONTAINER mysql --protocol tcp --host {} --port $HAPROXY_MYSQL_PORT --user $MYSQL_USER -p$MYSQL_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_incoming_addresses';" \
+      | sort \
+      | uniq \
+      | wc -w)
+    pass="the same mysql leader is now recognized by all servers"
+    fail="all servers do not agree about the mysql leader"
+    passed=$(test "$leaders" -eq 1 && echo "true")
+    UNHEALTHY_MYSQL_LEADER=$(check_health $UNHEALTHY_MYSQL_LEADER)
+    if [[ "$UNHEALTHY_MYSQL_LEADER" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+    # Is rancher healthy?
+    pong=$(curl -sf --max-time 2 http://localhost:$RANCHER_PORT/ping)
+    pass="its local rancher instance is now healthy"
+    fail="its local rancher instance is unhealthy"
+    passed=$(test "$pong" == "pong" && echo "true")
+    UNHEALTHY_RANCHER=$(check_health $UNHEALTHY_RANCHER)
+    if [[ "$UNHEALTHY_RANCHER" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+  else
+    UNHEALTHY_MYSQL_LEADER=1
+    UNHEALTHY_RANCHER=1
+  fi
+
+  # Is http://rancher reachable via external dns?
+  pong=$(curl -L -sf --max-time 2 http://${EXTERNAL_RANCHER_HOST}/ping)
+  pass="the rancher leader is now externally reachable via http"
+  fail="the rancher leader is unreachable externally via http"
+  passed=$(test "$pong" == "pong" && echo "true")
+  UNHEALTHY_DNS_HTTP=$(check_health $UNHEALTHY_DNS_HTTP)
+  if [[ "$UNHEALTHY_DNS_HTTP" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  # Is https://rancher reachable via external dns?
+  pong=$(curl -L -sf --max-time 2 https://${EXTERNAL_RANCHER_HOST}/ping)
+  pass="the rancher leader is now externally reachable via https"
+  fail="the rancher leader is unreachable externally via https"
+  passed=$(test "$pong" == "pong" && echo "true")
+  UNHEALTHY_DNS_HTTPS=$(check_health $UNHEALTHY_DNS_HTTPS)
+  if [[ "$UNHEALTHY_DNS_HTTPS" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
+
+  if [[ "$fail_count" -eq 0 ]]; then
+    healthy_streak=$((healthy_streak + 1))
+  else
+    healthy_streak=0
+  fi
+
+  if [[ "$healthy_streak" -eq 1 ]]; then
+    echo ":ok_hand: Host $PUBLIC_IP says that all systems are go!" | slack -p -a 'good' &> /dev/null
+  fi
+
+  if [[ "$healthy_streak" -eq 1 && "$first_time" == "true" ]]; then
+    aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null
+    if [[ -e credentials ]]; then source credentials; fi
+    if [[ "$CATTLE_ACCESS_KEY" != "" && "$CATTLE_SECRET_KEY" != "" ]]; then
+      host=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        https://$EXTERNAL_RANCHER_HOST/v1/hosts \
+        | jq -r ".data[] | select(.hostname == \"$HOSTNAME\") | .id")
+      if [[ "$host" != "" ]]; then
+        url="https://${EXTERNAL_RANCHER_HOST}/env/1a7/infra/hosts/${host}/containers"
+      else
+        url="https://${EXTERNAL_RANCHER_HOST}"
+      fi
+    fi
+    echo ":cow: Saddle up, cowboy! Your Rancher server is waiting for you at $url" | slack -p -a 'good' -g 'https://cldup.com/IF7C-8RqEt.gif' &> /dev/null
+    first_time=
+  fi
+
+  sleep $CHECK_INTERVAL
+done

@@ -1,0 +1,75 @@
+#! /bin/bash
+
+GRACE_PERIOD=${GRACE_PERIOD:-60}
+INTERVAL=${INTERVAL:-2}
+TIMEOUT=${TIMEOUT:-30}
+ETCD_URL=${ETCD_URL:-http://localhost:2379}
+ETCD_CONTAINER=${ETCD_CONTAINER:-etcd}
+
+SERF_CONTAINER=${SERF_CONTAINER:-serf}
+
+downtime=0
+
+while true; do
+  check_time=$(date +%s%3N)
+
+  sleep $INTERVAL
+
+  # If etcd is not running, continue on
+  if ! (docker inspect $ETCD_CONTAINER &> /dev/null); then downtime=0; continue; fi
+
+  # Allow grace period before starting to healthcheck new etcd container
+  current=$(date +%s)
+  started=$(date -d "$(docker inspect $ETCD_CONTAINER \
+    | jq -r .[0].State.StartedAt \
+    | cut -d . -f 1 \
+    | awk '{print $1}' \
+    | tr 'T' ' ')" +%s)
+  uptime=$((current - started))
+  if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then downtime=0; continue; fi
+
+  healthy=$(curl -sf --max-time 3 $ETCD_URL/health | jq -r .health)
+
+  if [[ "$healthy" == "true" ]]; then
+    if [[ "$downtime" != "0" ]]; then echo 'etcd is healthy again'; fi
+    downtime=0
+
+    instance_name=$(docker exec $SERF_CONTAINER serf info -format json | jq -r .agent.name)
+    serf_members=$(docker exec $SERF_CONTAINER serf members -format json | jq '.members[] | select(.status == "alive")')
+    serf_names=$(echo "$serf_members" | jq -r .name)
+    instance_ip=$(echo "$serf_members" \
+      | jq -r "select(.name == \"$instance_name\") | .addr" \
+      | cut -d: -f1)
+
+    etcd_members=$(curl -sf --max-time 3 $ETCD_URL/v2/members | jq .members[])
+    etcd_names=$(echo "$etcd_members" | jq -r .name)
+    new_leader=$(curl -sf --max-time 3 $ETCD_URL/v2/stats/self | jq -r 'select(.state == "StateLeader") | .name')
+    if [[ "$new_leader" != "" ]]; then
+      leader_ip=$(echo "$serf_members" \
+        | jq -r "select(.name == \"$new_leader\") | .addr" \
+        | cut -d: -f1)
+      status=$(curl -s -w %{http_code} -o /dev/null -XPUT "$ETCD_URL/v2/keys/leader" -d value=$leader_ip)
+    fi
+
+    extra_names=$(comm -23 <(echo "$etcd_names" | sort) <(echo "$serf_names" | sort))
+
+    for name in $extra_names; do
+      if [[ "$name" == "$instance_name" ]]; then continue; fi
+      id=$(echo "$etcd_members" | jq -r "select(.name == \"$name\") | .id")
+      echo "removing member $name - $id from the etcd cluster"
+      status=$(curl -s -w %{http_code} -o /dev/null -XDELETE "$ETCD_URL/v2/members/$id")
+    done
+  else
+    now=$(date +%s%3N)
+    check_time=$(((now - check_time) / 1000))
+    downtime=$((downtime + check_time))
+    echo 'received etcd unhealthy signal '$downtime
+  fi
+
+  # Restart etcd if it hasn't gotten healthy in time
+  if [[ "$downtime" -gt "$TIMEOUT" ]]; then
+    echo 'restarting etcd'
+    downtime=0
+    docker restart $ETCD_CONTAINER
+  fi
+done

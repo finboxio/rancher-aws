@@ -1,0 +1,10 @@
+confdir = "/etc/confd"
+watch = true
+interval = 10
+backend = "etcd"
+scheme = "http"
+nodes = [
+  "http://localhost:2379"
+]
+prefix = "/"
+verbose = true

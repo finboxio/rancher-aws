@@ -1,0 +1,174 @@
+#! /bin/bash
+set -eo pipefail
+
+S3_BUCKET=${S3_BUCKET:?"S3_BUCKET must be set"}
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
+RANCHER_MYSQL_HOST=${RANCHER_MYSQL_HOST:?"RANCHER_MYSQL_HOST must be set"}
+RANCHER_MYSQL_PORT=${RANCHER_MYSQL_PORT:?"RANCHER_MYSQL_PORT must be set"}
+RANCHER_MYSQL_USER=${RANCHER_MYSQL_USER:?"RANCHER_MYSQL_USER must be set"}
+RANCHER_MYSQL_PASSWORD=${RANCHER_MYSQL_PASSWORD:?"RANCHER_MYSQL_PASSWORD must be set"}
+RANCHER_MYSQL_DATABASE=${RANCHER_MYSQL_DATABASE:?"RANCHER_MYSQL_DATABASE must be set"}
+RANCHER_ADMIN_USER=${RANCHER_ADMIN_USER:?"RANCHER_ADMIN_USER must be set"}
+RANCHER_ADMIN_PASSWORD=${RANCHER_ADMIN_PASSWORD:?"RANCHER_ADMIN_PASSWORD must be set"}
+RANCHER_URL=${RANCHER_URL:?"RANCHER_URL must be set"}
+RANCHER_VERSION=${RANCHER_VERSION:-"latest"}
+RANCHER_IMAGE=rancher/server:${RANCHER_VERSION}
+BOOTSTRAP_TIMEOUT=${BOOTSTRAP_TIMEOUT:-600}
+
+echo 'Waiting for all autoscaling nodes to come online'
+
+self=$(ec2-ip)
+ips=($(asg-ips))
+size=${#ips[@]}
+launch=rancher-${size}node-ha.sh
+credentials=rancher-credentials
+
+echo 'Waiting for local MySQL to join primary component'
+attempts=$((BOOTSTRAP_TIMEOUT / 10))
+
+for ((; attempts>=0; attempts--)); do
+  status=$(docker exec mysql mysql \
+    -h $RANCHER_MYSQL_HOST \
+    -P $RANCHER_MYSQL_PORT \
+    -u root \
+    -p$MYSQL_ROOT_PASSWORD \
+    -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_cluster_status';")
+
+  ready=$(docker exec mysql mysql \
+    -h $RANCHER_MYSQL_HOST \
+    -P $RANCHER_MYSQL_PORT \
+    -u $RANCHER_MYSQL_USER \
+    -p$RANCHER_MYSQL_PASSWORD \
+    -D $RANCHER_MYSQL_DATABASE \
+    -sse "select 1;")
+
+  if [[ "$status" == "Primary" && "$ready" == "1" ]]; then
+    break
+  fi
+  echo 'Waiting for MySQL...'
+  sleep 10
+done
+
+if [[ "$attempts" == "0" ]]; then
+  echo >&2 'Bootstrap timed out waiting for MySQL to initialize.'
+  exit 1
+fi
+
+# Check s3 bucket for launch script
+echo 'Checking S3 bucket for HA launch script'
+
+# If launch script exists in s3
+if aws s3 cp s3://$S3_BUCKET/rancher-${size}node-ha.sh ${launch}; then
+  echo 'Downloaded HA launch script'
+  echo 'Launching rancher'
+  chmod +x ./${launch}
+elif [[ "$self" == "${ips[0]}" ]]; then
+  echo 'No HA launch script found...bootstrapping cluster'
+
+  # Temporarily disable auth in case we're using a backup db that had auth enabled
+  deauth=$(docker exec mysql mysql \
+    -h $RANCHER_MYSQL_HOST \
+    -P $RANCHER_MYSQL_PORT \
+    -u $RANCHER_MYSQL_USER \
+    -p$RANCHER_MYSQL_PASSWORD \
+    -D $RANCHER_MYSQL_DATABASE \
+    -sse 'update setting set value="false" where name="api.security.enabled";')
+
+  docker rm -fv rancher-bootstrap >/dev/null 2>&1 || true
+  ID=$(docker run -d \
+    --name rancher-bootstrap \
+    --restart always \
+    --net host \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /var/lib/rancher/etc:/var/lib/rancher/etc \
+    -e CATTLE_DB_CATTLE_MYSQL_HOST=${RANCHER_MYSQL_HOST} \
+    -e CATTLE_DB_CATTLE_MYSQL_PORT=${RANCHER_MYSQL_PORT} \
+    -e CATTLE_DB_CATTLE_MYSQL_NAME=${RANCHER_MYSQL_DATABASE} \
+    -e CATTLE_DB_CATTLE_USERNAME=${RANCHER_MYSQL_USER} \
+    -e CATTLE_DB_CATTLE_PASSWORD=${RANCHER_MYSQL_PASSWORD} \
+    -e CATTLE_HA_ENABLED=false \
+    $RANCHER_IMAGE)
+
+  echo "Started bootstrap container $ID"
+
+  for ((; attempts>=0; attempts--)); do
+    if curl -sf http://$self:8080/v1 &> /dev/null; then
+      break
+    fi
+    echo 'Waiting for bootstrap container to come online...'
+    sleep 10
+  done
+
+  if [[ "$attempts" -le "0" ]]; then
+    echo >&2 'Bootstrap timed out waiting for rancher server to initialize.'
+    docker rm -fv rancher-bootstrap >/dev/null 2>&1 || true
+    exit 1
+  fi
+
+  echo 'Generating bootstrap scripts'
+  curl -sf -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "cert":null,
+      "certChain":null,
+      "clusterSize":'${#ips[@]}',
+      "hostRegistrationUrl":"https://'${RANCHER_URL}'",
+      "httpEnabled":true,
+      "httpPort":80,
+      "httpsPort":443,
+      "key":null,
+      "ppHttpPort":81,
+      "ppHttpsPort":444,
+      "redisPort":6379,
+      "swarmEnabled":true,
+      "swarmPort":2376,
+      "zookeeperClientPort":2181,
+      "zookeeperLeaderPort":3888,
+      "zookeeperQuorumPort":2888
+    }' \
+    "http://$self:8080/v1/haconfigs/haconfig/?action=createscript" > ${launch}
+
+  chmod +x ${launch}
+  sed -i 's/# export CATTLE_HA_ENABLED=true/export CATTLE_HA_ENABLED=true/' ${launch}
+  sed -i '/export CATTLE_HA_ENABLED=true/a export CATTLE_API_ALLOW_CLIENT_OVERRIDE=true' ${launch}
+  aws s3 cp ${launch} s3://$S3_BUCKET/${launch}
+
+  echo 'Generating an admin api key'
+  key=$(curl -sf -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"accountId":"1a1", "description":"CheaPaaS Service Key", "name":"CheaPaaS"}' \
+    "http://$self:8080/v1/apikeys")
+  CATTLE_ACCESS_KEY=$(echo "$key" | jq '.publicValue')
+  CATTLE_SECRET_KEY=$(echo "$key" | jq '.secretValue')
+  rm -f credentials
+  touch credentials
+  echo "export CATTLE_ACCESS_KEY=$CATTLE_ACCESS_KEY" >> credentials
+  echo "export CATTLE_SECRET_KEY=$CATTLE_SECRET_KEY" >> credentials
+  aws s3 cp credentials ${CREDENTIALS_FILE}
+
+  echo 'Creating admin user and enabling authentication'
+  curl -sf -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "accessMode":"unrestricted",
+      "enabled":true,
+      "name":"admin",
+      "password":"'${RANCHER_ADMIN_PASSWORD}'",
+      "username":"'${RANCHER_ADMIN_USER}'"
+    }' \
+    "http://$self:8080/v1/localauthconfigs"
+
+  echo 'Bootstrap completed successfully.'
+  docker rm -fv rancher-bootstrap >/dev/null 2>&1 || true
+else
+  echo 'Could not launch HA server...exiting in 10s'
+  sleep 10
+  exit 1
+fi
+
+sed -i 's/'${RANCHER_MYSQL_HOST}'/'${self}'/' ${launch}
+exec ./${launch}

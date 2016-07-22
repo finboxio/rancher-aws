@@ -1,0 +1,127 @@
+#!/bin/bash
+
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+RANCHER_URL=${RANCHER_URL:?"RANCHER_URL must be set"}
+RANCHER_PORT=${RANCHER_PORT:-80}
+HOSTNAME=${HOSTNAME}
+
+function success () {
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+function error () {
+  echo -ne "HTTP/1.1 500 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+echo "Rancher server $HOSTNAME received a termination signal" | \
+  slack -p -a "warning" &> /dev/null
+
+aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null
+if [[ -e credentials ]]; then
+  source credentials
+fi
+
+#
+# Deactivate the rancher server
+#
+
+if [[ "$CATTLE_ACCESS_KEY" != "" && "$CATTLE_SECRET_KEY" != "" ]]; then
+  # Use our local rancher api if it is healthy
+  # Otherwise make requests to external dns
+  pong=$(curl -sf --max-time 2 http://localhost:$RANCHER_PORT/ping)
+  if [[ "$pong" == "pong" ]]; then
+    rancher_url="http://localhost:$RANCHER_PORT"
+  else
+    rancher_url=$RANCHER_URL
+  fi
+
+  host=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+    $rancher_url/v1/hosts \
+    | jq -r ".data[] | select(.hostname == \"$HOSTNAME\") | .id")
+
+  if [[ "$host" != "" ]]; then
+    echo "Decommissioning rancher server $host..." | \
+      slack -p -a "warning" &> /dev/null
+
+    echo "Deactivating $host" | slack -p -a "#000000" &> /dev/null
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      $rancher_url/v1/hosts/$host/?action=deactivate | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "inactive" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        $rancher_url/v1/hosts/$host | jq -r .state)
+      sleep 1
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not deactivate host $HOSTNAME. Check the host's status at $RANCHER_URL/env/1a7/infra/hosts."
+    fi
+
+    echo "Removing $host" | slack -p -a "#000000" &> /dev/null
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      $rancher_url/v1/hosts/$host/?action=remove | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "removed" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        $rancher_url/v1/hosts/$host | jq -r .state)
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not remove host $HOSTNAME. Check the host's status at $RANCHER_URL/env/1a7/infra/hosts."
+    fi
+
+    echo "Purging $host" | slack -p -a "#000000" &> /dev/null
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      $rancher_url/v1/hosts/$host/?action=purge | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "purged" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        $rancher_url/v1/hosts/$host | jq -r .state)
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not purge host $HOSTNAME. Check the host's status at $RANCHER_URL/env/1a7/infra/hosts."
+    fi
+
+    echo "Successfully decommissioned rancher server $host" | \
+      slack -p -a "good" &> /dev/null
+  else
+    echo "Hostname $HOSTNAME is not registered with rancher. Skipping host deactivation." | \
+      slack -p -a "danger" &> /dev/null
+  fi
+else
+  echo "Rancher credentials are not available. You will need to deactivate this host manually at $RANCHER_URL/env/1a7/infra/hosts." | \
+    slack -p -a "danger" &> /dev/null
+fi
+
+#
+# Initiate a database snapshot
+#
+
+echo "Initiating mysql snapshot" | slack -p -a "warning" &> /dev/null
+result=$(docker exec mysql mysql-backup)
+echo "Successfully created snapshot $result" | slack -p -a "warning" &> /dev/null
+
+success
