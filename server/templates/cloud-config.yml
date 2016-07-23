@@ -197,6 +197,8 @@ rancher:
         - RANCHER_MYSQL_PASSWORD=${rancher_mysql_password}
         - RANCHER_ADMIN_USER=${rancher_admin_user}
         - RANCHER_ADMIN_PASSWORD=${rancher_admin_password}
+        - CLUSTER_SIZE=${cluster_size}
+        - RANCHER_VERSION=v1.1.2
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
         - /usr/bin/docker:/usr/bin/docker

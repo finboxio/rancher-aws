@@ -10,6 +10,7 @@ RANCHER_MYSQL_DATABASE=${RANCHER_MYSQL_DATABASE:?"RANCHER_MYSQL_DATABASE must be
 RANCHER_ADMIN_USER=${RANCHER_ADMIN_USER:?"RANCHER_ADMIN_USER must be set"}
 RANCHER_ADMIN_PASSWORD=${RANCHER_ADMIN_PASSWORD:?"RANCHER_ADMIN_PASSWORD must be set"}
 RANCHER_URL=${RANCHER_URL:?"RANCHER_URL must be set"}
+CLUSTER_SIZE=${CLUSTER_SIZE:?"CLUSTER_SIZE"}
 RANCHER_VERSION=${RANCHER_VERSION:-"latest"}
 RANCHER_IMAGE=rancher/server:${RANCHER_VERSION}
 BOOTSTRAP_TIMEOUT=${BOOTSTRAP_TIMEOUT:-600}
@@ -19,7 +20,7 @@ echo 'Waiting for all autoscaling nodes to come online'
 
 self=$(ec2-ip)
 ips=($(asg-ips))
-size=${#ips[@]}
+size=${CLUSTER_SIZE}
 launch=rancher-${size}node-ha.sh
 credentials=rancher-credentials
 
@@ -56,7 +57,7 @@ fi
 echo 'Checking S3 bucket for HA launch script'
 
 # If launch script exists in s3
-if aws s3 cp s3://$S3_BUCKET/rancher-${size}node-ha.sh ${launch}; then
+if aws s3 cp s3://$S3_BUCKET/${launch} ${launch}; then
   echo 'Downloaded HA launch script'
   echo 'Launching rancher'
   chmod +x ./${launch}
@@ -110,7 +111,7 @@ elif [[ "$self" == "${ips[0]}" ]]; then
     -d '{
       "cert":null,
       "certChain":null,
-      "clusterSize":'${#ips[@]}',
+      "clusterSize":'${CLUSTER_SIZE}',
       "hostRegistrationUrl":"https://'${RANCHER_URL}'",
       "httpEnabled":true,
       "httpPort":80,
@@ -179,4 +180,4 @@ else
 fi
 
 sed -i 's/'${RANCHER_MYSQL_HOST}'/'${self}'/' ${launch}
-exec ./${launch}
+exec ./${launch} ${RANCHER_IMAGE}
