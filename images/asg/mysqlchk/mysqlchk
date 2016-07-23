@@ -10,7 +10,7 @@ status=$(mysql \
   --port=$MYSQL_PORT \
   --user=$MYSQL_USER \
   --password=$MYSQL_PASSWORD \
-  -sse "select VARIABLE_VALUE from information_schema.SESSION_STATUS where VARIABLE_NAME = 'wsrep_cluster_status';")
+  -sse "select VARIABLE_VALUE from information_schema.SESSION_STATUS where VARIABLE_NAME = 'wsrep_cluster_status';" 2>/dev/null)
 
 if [ "$status" == "Primary" ]; then
   # mysql is fine, return http 200
