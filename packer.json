@@ -1,24 +1,19 @@
 {
   "_source_ami_info": "[US-WEST-2] Rancher OS v0.5.0 HVM",
   "variables": {
-    "ami": "ami-f0f03190"
+    "ami": "ami-f0f03190",
     "user": "{{ env `USER` }}",
     "atlas_token": "{{ env `ATLAS_TOKEN` }}",
     "aws_access_key": "{{ env `AWS_ACCESS_KEY_ID` }}",
     "aws_secret": "{{ env `AWS_SECRET_ACCESS_KEY` }}",
     "aws_region": "{{ env `AWS_DEFAULT_REGION` }}",
     "aws_instance_type": "m3.large",
+    "dockerhub": null,
     "role": null,
     "version": null,
     "branch": null,
     "commit": null,
     "repository": null
-  },
-  "push": {
-    "name": "finboxio/rancher-asg-{{ user `role` }}",
-    "token": "{{ user `atlas_token` }}",
-    "base_dir": "..",
-    "vcs": true
   },
   "builders": [
     {
@@ -28,7 +23,7 @@
       "secret_key": "{{ user `aws_secret` }}",
       "region": "{{ user `aws_region` }}",
       "source_ami": "{{ user `ami` }}",
-      "ami_name": "rancher-asg-{{ user `role` }} v{{ user `version` }}",
+      "ami_name": "rancher-asg-{{ user `role` }} {{ user `version` }}",
       "instance_type": "{{ user `aws_instance_type` }}",
       "ami_description": "Rancher AMI ({{ user `role` }}), Version {{ user `version` }}. Built by user {{ user `user` }} from the {{ user `commit` }} commit of branch '{{ user `branch` }}' in the {{ user `repository` }} repo on {{ isotime \"2006-01-02\" }}",
       "ssh_username": "rancher",
@@ -57,7 +52,8 @@
       "type": "shell",
       "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
       "inline": [
-        "docker pull bdentino/rancher-asg-{{ user `role` }}:{{ user `version` }}"
+        "docker pull rancher/server:latest",
+        "docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}"
       ]
     }
   ],

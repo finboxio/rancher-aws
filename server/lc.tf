@@ -1,3 +1,8 @@
+resource "atlas_artifact" "rancher-asg-server" {
+  name = "finboxio/rancher-asg-server"
+  type = "amazon.image"
+}
+
 resource "template_file" "rancher-userdata-template" {
   template = "${file("templates/cloud-config.yml")}"
 
@@ -14,6 +19,7 @@ resource "template_file" "rancher-userdata-template" {
     shudder_sns_topic      = "${aws_sns_topic.rancher-terminations.arn}"
     shudder_sqs_prefix     = "${var.deployment_id}"
     cluster_size           = "${var.cluster_size}"
+    version                = "${atlas_artifact.rancher-asg-server.metadata_full.version}"
   }
 
   lifecycle {
@@ -22,7 +28,7 @@ resource "template_file" "rancher-userdata-template" {
 }
 
 resource "aws_launch_configuration" "rancher-lc" {
-  image_id             = "ami-f0f03190"
+  image_id             = "${atlas_artifact.rancher-asg-server.metadata_full.region-us-west-2}"
   name_prefix          = "${var.deployment_id}-rancher-"
   instance_type        = "${var.instance_type}"
   spot_price           = "${var.spot_price}"
