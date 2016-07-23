@@ -2,7 +2,7 @@ resource "aws_autoscaling_group" "rancher-asg" {
   name                 = "${var.deployment_id}-rancher-asg"
   launch_configuration = "${aws_launch_configuration.rancher-lc.name}"
   max_size             = "${var.cluster_size}"
-  min_size             = "${var.quorum_size}"
+  min_size             = "${(var.cluster_size + 1) / 2}"
   desired_capacity     = "${var.cluster_size}"
   availability_zones   = ["us-west-2a"]
   load_balancers       = ["${aws_elb.rancher-elb.id}"]
