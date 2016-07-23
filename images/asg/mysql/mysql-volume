@@ -2,6 +2,7 @@
 
 DATA_DIR=${DATA_DIR:-/etc/mysql/data}
 RANCHER_CLUSTER_ID=${RANCHER_CLUSTER_ID:-rancher-mysql-backup}
+MYSQL_IMAGE=${MYSQL_IMAGE?"MYSQL_IMAGE must be set"}
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
 MYSQL_USER=${MYSQL_USER:?"MYSQL_USER must be set"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:?"MYSQL_PASSWORD must be set"}
@@ -54,8 +55,9 @@ docker run \
   --name mysql \
   --entrypoint mysql-bootstrap \
   --label io.rancher.stack.name=os \
+  --volume-driver convoy \
+  -v $MYSQL_VOLUME_NAME:$DATA_DIR \
   -v /var/run:/var/run \
-  -v /etc/mysql/data:$DATA_DIR \
   -e MYSQL_HOST=${MYSQL_HOST} \
   -e MYSQL_PORT=${MYSQL_PORT} \
   -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
@@ -64,4 +66,4 @@ docker run \
   -e MYSQL_DATABASE=${MYSQL_DATABASE} \
   -e DATA_DIR=${DATA_DIR} \
   -e RANCHER_CLUSTER_ID=${RANCHER_CLUSTER_ID} \
-  bdentino/asg
+  ${MYSQL_IMAGE}

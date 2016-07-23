@@ -6,7 +6,7 @@ service mysqlchk
         socket_type     = stream
         port            = 9200
         wait            = no
-        user            = root
+        user            = mysql
         server          = /usr/bin/mysqlchk
         log_on_failure  += USERID
         disable         = no

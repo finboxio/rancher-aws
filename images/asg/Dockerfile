@@ -117,7 +117,7 @@ EXPOSE 7946
 EXPOSE 7373
 
 COPY mysql/my.cnf /etc/mysql/
-RUN mkdir -p /etc/mysql/data
+RUN mkdir -p /etc/mysql/data && chown -R mysql:mysql /etc/mysql/data
 EXPOSE 3306
 EXPOSE 4567
 EXPOSE 4568
@@ -126,11 +126,13 @@ EXPOSE 4444
 COPY mysql/mysql-bootstrap /usr/bin/mysql-bootstrap
 COPY mysql/mysql-volume /usr/bin/mysql-volume
 COPY mysql/mysql-backup /usr/bin/mysql-backup
+RUN chown -R mysql:mysql /usr/bin/mysql*
 
 RUN mkdir -p /etc/mysqlchk
 COPY mysqlchk/mysqlchk /usr/bin/mysqlchk
 COPY mysqlchk/mysqlchk-bootstrap /usr/bin/mysqlchk-bootstrap
 COPY mysqlchk/service /etc/mysqlchk/service
+RUN chown -R mysql:mysql /usr/bin/mysqlchk*
 EXPOSE 9200
 
 RUN mkdir -p /etc/terminator
