@@ -8,7 +8,9 @@ EXTERNAL_RANCHER_HOST=${EXTERNAL_RANCHER_HOST?"EXTERNAL_RANCHER_HOST must be set
 
 PUBLIC_IP=$(dig +short myip.opendns.com @resolver2.opendns.com)
 CHECK_INTERVAL=${CHECK_INTERVAL:-10}
-ALERT_INTERVAL=${ALERT_INTERVAL:-300}
+ALERT_COUNT=${ALERT_COUNT:-30}
+FALL_COUNT=${FALL_COUNT:-2}
+RISE_COUNT=${RISE_COUNT:-2}
 SERF_CONTAINER=${SERF_CONTAINER:-serf}
 MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
 ETCD_PORT=${ETCD_PORT:-2379}
@@ -16,18 +18,17 @@ MYSQLCHK_PORT=${MYSQLCHK_PORT:-9200}
 RANCHER_PORT=${RANCHER_PORT:-80}
 HAPROXY_MYSQL_PORT=${HAPROXY_MYSQL_PORT:-3307}
 
-UNHEALTHY_SIZE=1
-UNHEALTHY_ETCD=1
-UNHEALTHY_ETCD_LEADER=1
-UNHEALTHY_MYSQL=1
-UNHEALTHY_MYSQL_LEADER=1
-UNHEALTHY_RANCHER=1
-UNHEALTHY_HAPROXY_MYSQL=1
-UNHEALTHY_DNS_HTTP=1
-UNHEALTHY_DNS_HTTPS=1
+UNHEALTHY_SIZE=$FALL_COUNT
+UNHEALTHY_ETCD=$FALL_COUNT
+UNHEALTHY_ETCD_LEADER=$FALL_COUNT
+UNHEALTHY_MYSQL=$FALL_COUNT
+UNHEALTHY_MYSQL_LEADER=$FALL_COUNT
+UNHEALTHY_RANCHER=$FALL_COUNT
+UNHEALTHY_HAPROXY_MYSQL=$FALL_COUNT
+UNHEALTHY_DNS_HTTP=$FALL_COUNT
+UNHEALTHY_DNS_HTTPS=$FALL_COUNT
 
 first_time="true"
-new_pass=
 passed=
 pass=
 fail=
@@ -35,17 +36,21 @@ function check_health () {
   unhealthy=$1
   healthy=$(test "$unhealthy" -eq 0 && echo "true")
   if [[ "$healthy" != "true" && "$passed" == "true" ]]; then
-    unhealthy=0
-    new_pass="true"
-    echo "Host $PUBLIC_IP says that $pass" | slack -p -a "good" &> /dev/null
+    unhealthy=$((unhealthy - 1))
+    if [[ "$unhealthy" -gt "$RISE_COUNT" ]]; then
+      unhealthy=$RISE_COUNT
+    fi
+    if [[ "$unhealthy" -eq 0 ]]; then
+      echo "Host $PUBLIC_IP says that $pass" | slack -p -a "good" &> /dev/null
+    fi
   elif [[ "$passed" != "true" ]]; then
-    unhealthy=$((unhealthy + CHECK_INTERVAL))
-    if [[ "$unhealthy" -ge "$ALERT_INTERVAL" ]]; then
-      unhealthy=$CHECK_INTERVAL
+    unhealthy=$((unhealthy + 1))
+    if [[ "$unhealthy" -ge "$((ALERT_COUNT + FALL_COUNT))" ]]; then
+      unhealthy=$FALL_COUNT
     fi
   fi
 
-  if [[ "$unhealthy" -gt "0" && "$unhealthy" -le "$CHECK_INTERVAL" ]]; then
+  if [[ "$unhealthy" -eq "$FALL_COUNT" ]]; then
     echo "Host $PUBLIC_IP says that $fail" | slack -p -a "danger" &> /dev/null
   fi
   echo $unhealthy
