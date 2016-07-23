@@ -5,7 +5,7 @@ write_files:
     owner: root
     group: rancher
     content: |
-      0 */4 * * * docker run --rm --net host -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -e RANCHER_CLUSTER_ID=${rancher_url} -e SLACK_WEBHOOK_URL=${slack_webhook} -e SLACK_USERNAME=Rancher -e SLACK_ICON=cow --entrypoint backup finboxio/rancher-asg-server:${version}-latest
+      0 */4 * * * docker run --rm --net host -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/usr/bin/docker -e RANCHER_CLUSTER_ID=${rancher_url} -e SLACK_WEBHOOK_URL=${slack_webhook} -e SLACK_USERNAME=Rancher -e SLACK_ICON=cow --entrypoint backup finboxio/rancher-asg-server:${version}${dev_tag}
   - path: /etc/rc.local
     permissions: "0755"
     owner: root
@@ -26,7 +26,7 @@ write_files:
 rancher:
   services:
     status:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "monitor" ]
       restart: always
       net: host
@@ -43,7 +43,7 @@ rancher:
         - /var/run/docker.sock:/var/run/docker.sock
         - /usr/bin/docker:/usr/bin/docker
     last-words:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "last-words" ]
       net: host
       stdin_open: true
@@ -54,7 +54,7 @@ rancher:
         - SLACK_USERNAME=Rancher
         - SLACK_ICON=cow
     convoy:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "convoy-bootstrap" ]
       restart: always
       net: host
@@ -67,14 +67,14 @@ rancher:
         - /var/run/convoy:/var/run/convoy
         - /var/lib/rancher/convoy:/var/lib/rancher/convoy
     serf:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "serf-bootstrap" ]
       restart: always
       net: host
       volumes:
         - /etc/serf:/etc/serf
     etcd:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "etcd-bootstrap" ]
       restart: always
       net: host
@@ -85,7 +85,7 @@ rancher:
         - /var/run/docker.sock:/var/run/docker.sock
         - /usr/bin/docker:/usr/bin/docker
     etcd-monitor:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "etcd-monitor" ]
       restart: always
       net: host
@@ -95,7 +95,7 @@ rancher:
         - /var/run/docker.sock:/var/run/docker.sock
         - /usr/bin/docker:/usr/bin/docker
     confd:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "confd-bootstrap" ]
       restart: always
       net: host
@@ -117,7 +117,7 @@ rancher:
       volumes:
         - /etc/haproxy:/usr/local/etc/haproxy
     mysqlvol:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'mysql-volume' ]
       restart: always
       net: host
@@ -136,12 +136,12 @@ rancher:
         - MYSQL_DATABASE=${rancher_mysql_database}
         - MYSQL_VOLUME_NAME=mysqlvol
         - MYSQL_VOLUME_SIZE=12G
-        - MYSQL_IMAGE=finboxio/rancher-asg-server:${version}-latest
+        - MYSQL_IMAGE=finboxio/rancher-asg-server:${version}${dev_tag}
       volumes:
         - /var/run:/var/run
         - /usr/bin/docker:/usr/bin/docker
     mysqlchk:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'mysqlchk-bootstrap' ]
       restart: always
       net: host
@@ -155,7 +155,7 @@ rancher:
       volumes:
         - /var/run:/var/run
     shudder:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'shudder-bootstrap' ]
       restart: on-failure
       net: host
@@ -164,7 +164,7 @@ rancher:
         - SNS_TOPIC=${shudder_sns_topic}
         - ENDPOINT=http://localhost:9999
     terminator:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'terminator-bootstrap' ]
       restart: on-failure
       net: host
@@ -178,7 +178,7 @@ rancher:
         - /var/run/docker.sock:/var/run/docker.sock
         - /usr/bin/docker:/usr/bin/docker
     rancher-server:
-      image: finboxio/rancher-asg-server:${version}-latest
+      image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'rancher-bootstrap' ]
       restart: on-failure
       net: host

@@ -20,6 +20,7 @@ resource "template_file" "rancher-userdata-template" {
     shudder_sqs_prefix     = "${var.deployment_id}"
     cluster_size           = "${var.cluster_size}"
     version                = "${atlas_artifact.rancher-asg-server.metadata_full.version}"
+    dev_tag                = "${var.dev_tag}"
   }
 
   lifecycle {
