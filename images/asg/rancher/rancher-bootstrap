@@ -135,11 +135,15 @@ elif [[ "$self" == "${ips[0]}" ]]; then
   aws s3 cp ${launch} s3://$S3_BUCKET/${launch}
 
   echo 'Generating an admin api key'
-  key=$(curl -sf -X POST \
-    -H 'Accept: application/json' \
-    -H 'Content-Type: application/json' \
-    -d '{"accountId":"1a1", "description":"CheaPaaS Service Key", "name":"CheaPaaS"}' \
-    "http://$self:8080/v1/apikeys")
+  key=
+  while [[ "$key" == "" ]]; do
+    key=$(curl -f -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{"accountId":"1a1", "description":"CheaPaaS Service Key", "name":"CheaPaaS"}' \
+      "http://$self:8080/v1/apikeys")
+    sleep 5
+  done
   CATTLE_ACCESS_KEY=$(echo "$key" | jq '.publicValue')
   CATTLE_SECRET_KEY=$(echo "$key" | jq '.secretValue')
   rm -f credentials
