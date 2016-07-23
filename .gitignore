@@ -1,1 +1,3 @@
 server/vars.tf
+*.tfstate
+*.tfstate.backup
