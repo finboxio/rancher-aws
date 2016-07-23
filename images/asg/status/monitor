@@ -84,7 +84,7 @@ while true; do
     passed=$(test "$leader" != "" && echo "true")
     UNHEALTHY_ETCD_LEADER=$(check_health $UNHEALTHY_ETCD_LEADER)
   else
-    UNHEALTHY_ETCD_LEADER=1
+    UNHEALTHY_ETCD_LEADER=$FALL_COUNT
   fi
   if [[ "$UNHEALTHY_ETCD_LEADER" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
 
@@ -102,7 +102,7 @@ while true; do
     passed=$(docker exec $MYSQL_CONTAINER mysql --protocol tcp --host localhost --port $HAPROXY_MYSQL_PORT --user $MYSQL_USER -p$MYSQL_PASSWORD -sse "select 'true';")
     UNHEALTHY_HAPROXY_MYSQL=$(check_health $UNHEALTHY_HAPROXY_MYSQL)
   else
-    UNHEALTHY_HAPROXY_MYSQL=1
+    UNHEALTHY_HAPROXY_MYSQL=$FALL_COUNT
   fi
   if [[ "$UNHEALTHY_HAPROXY_MYSQL" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
 
@@ -129,8 +129,8 @@ while true; do
     UNHEALTHY_RANCHER=$(check_health $UNHEALTHY_RANCHER)
     if [[ "$UNHEALTHY_RANCHER" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
   else
-    UNHEALTHY_MYSQL_LEADER=1
-    UNHEALTHY_RANCHER=1
+    UNHEALTHY_MYSQL_LEADER=$FALL_COUNT
+    UNHEALTHY_RANCHER=$FALL_COUNT
   fi
 
   # Is http://rancher reachable via external dns?
