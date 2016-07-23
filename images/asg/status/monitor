@@ -33,9 +33,11 @@ passed=
 pass=
 fail=
 function check_health () {
+  rising=
   unhealthy=$1
   healthy=$(test "$unhealthy" -eq 0 && echo "true")
   if [[ "$healthy" != "true" && "$passed" == "true" ]]; then
+    rising="true"
     unhealthy=$((unhealthy - 1))
     if [[ "$unhealthy" -gt "$RISE_COUNT" ]]; then
       unhealthy=$RISE_COUNT
@@ -50,7 +52,7 @@ function check_health () {
     fi
   fi
 
-  if [[ "$unhealthy" -eq "$FALL_COUNT" ]]; then
+  if [[ "$unhealthy" -eq "$FALL_COUNT" && "$rising" != "true" ]]; then
     echo "Host $PUBLIC_IP says that $fail" | slack -p -a "danger" &> /dev/null
   fi
   echo $unhealthy
