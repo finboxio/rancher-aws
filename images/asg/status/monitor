@@ -111,7 +111,7 @@ while true; do
     leaders=$(docker exec $SERF_CONTAINER serf members -format json \
       | jq -r '.members[] | select(.status == "alive") | .addr' \
       | cut -d: -f1 \
-      | xargs -I{} -0 docker exec $MYSQL_CONTAINER mysql --protocol tcp --host {} --port $HAPROXY_MYSQL_PORT --user $MYSQL_USER -p$MYSQL_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_incoming_addresses';" \
+      | xargs -I{} -0 docker exec $MYSQL_CONTAINER mysql --protocol tcp --host {} --port $HAPROXY_MYSQL_PORT --user $MYSQL_USER -p$MYSQL_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_local_index';" \
       | sort \
       | uniq \
       | wc -w)

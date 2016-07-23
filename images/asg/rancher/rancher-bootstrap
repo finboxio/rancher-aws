@@ -2,7 +2,6 @@
 
 S3_BUCKET=${S3_BUCKET:?"S3_BUCKET must be set"}
 CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
-MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
 RANCHER_MYSQL_HOST=${RANCHER_MYSQL_HOST:?"RANCHER_MYSQL_HOST must be set"}
 RANCHER_MYSQL_PORT=${RANCHER_MYSQL_PORT:?"RANCHER_MYSQL_PORT must be set"}
 RANCHER_MYSQL_USER=${RANCHER_MYSQL_USER:?"RANCHER_MYSQL_USER must be set"}
@@ -14,6 +13,7 @@ RANCHER_URL=${RANCHER_URL:?"RANCHER_URL must be set"}
 RANCHER_VERSION=${RANCHER_VERSION:-"latest"}
 RANCHER_IMAGE=rancher/server:${RANCHER_VERSION}
 BOOTSTRAP_TIMEOUT=${BOOTSTRAP_TIMEOUT:-600}
+MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
 
 echo 'Waiting for all autoscaling nodes to come online'
 
@@ -30,19 +30,17 @@ for ((; attempts>=0; attempts--)); do
   status=$(docker exec mysql mysql \
     -h $RANCHER_MYSQL_HOST \
     -P $RANCHER_MYSQL_PORT \
-    -u root \
-    -p$MYSQL_ROOT_PASSWORD \
-    -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_cluster_status';")
-
-  ready=$(docker exec mysql mysql \
-    -h $RANCHER_MYSQL_HOST \
-    -P $RANCHER_MYSQL_PORT \
     -u $RANCHER_MYSQL_USER \
     -p$RANCHER_MYSQL_PASSWORD \
-    -D $RANCHER_MYSQL_DATABASE \
-    -sse "select 1;")
+    -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_cluster_status';")
 
-  if [[ "$status" == "Primary" && "$ready" == "1" ]]; then
+  leaders=$(echo "${ips[@]}" | tr ' ' '\n' \
+    | xargs -I{} -0 docker exec $MYSQL_CONTAINER mysql --protocol tcp --host {} --port $RANCHER_MYSQL_PORT --user $RANCHER_MYSQL_USER -p$RANCHER_MYSQL_PASSWORD -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_local_index';" \
+    | sort \
+    | uniq \
+    | wc -w)
+
+  if [[ "$status" == "Primary" && "$leaders" == "1" ]]; then
     break
   fi
   echo 'Waiting for MySQL...'
@@ -132,25 +130,29 @@ elif [[ "$self" == "${ips[0]}" ]]; then
   chmod +x ${launch}
   sed -i 's/# export CATTLE_HA_ENABLED=true/export CATTLE_HA_ENABLED=true/' ${launch}
   sed -i '/export CATTLE_HA_ENABLED=true/a export CATTLE_API_ALLOW_CLIENT_OVERRIDE=true' ${launch}
-  aws s3 cp ${launch} s3://$S3_BUCKET/${launch}
 
   echo 'Generating an admin api key'
+  admin=
+  while [[ "$admin" == "" ]]; do
+    admin=$(curl -sf http://$self:8080/v1/accounts | jq -r '.data[] | select(.name=="admin") | .id')
+  done
+
   key=
   while [[ "$key" == "" ]]; do
     key=$(curl -f -X POST \
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
-      -d '{"accountId":"1a1", "description":"CheaPaaS Service Key", "name":"CheaPaaS"}' \
+      -d '{"accountId":"'$admin'", "description":"Finbox.io Service Key", "name":"Finbox.io"}' \
       "http://$self:8080/v1/apikeys")
     sleep 5
   done
+
   CATTLE_ACCESS_KEY=$(echo "$key" | jq '.publicValue')
   CATTLE_SECRET_KEY=$(echo "$key" | jq '.secretValue')
   rm -f credentials
   touch credentials
   echo "export CATTLE_ACCESS_KEY=$CATTLE_ACCESS_KEY" >> credentials
   echo "export CATTLE_SECRET_KEY=$CATTLE_SECRET_KEY" >> credentials
-  aws s3 cp credentials ${CREDENTIALS_FILE}
 
   echo 'Creating admin user and enabling authentication'
   curl -sf -X POST \
@@ -167,6 +169,9 @@ elif [[ "$self" == "${ips[0]}" ]]; then
 
   echo 'Bootstrap completed successfully.'
   docker rm -fv rancher-bootstrap >/dev/null 2>&1 || true
+
+  aws s3 cp ${launch} s3://$S3_BUCKET/${launch}
+  aws s3 cp credentials ${CREDENTIALS_FILE}
 else
   echo 'Could not launch HA server...exiting in 10s'
   sleep 10
