@@ -1,5 +1,4 @@
 #! /bin/bash
-set -eo pipefail
 
 S3_BUCKET=${S3_BUCKET:?"S3_BUCKET must be set"}
 CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
@@ -67,13 +66,13 @@ elif [[ "$self" == "${ips[0]}" ]]; then
   echo 'No HA launch script found...bootstrapping cluster'
 
   # Temporarily disable auth in case we're using a backup db that had auth enabled
-  deauth=$(docker exec mysql mysql \
+  docker exec mysql mysql \
     -h $RANCHER_MYSQL_HOST \
     -P $RANCHER_MYSQL_PORT \
     -u $RANCHER_MYSQL_USER \
     -p$RANCHER_MYSQL_PASSWORD \
     -D $RANCHER_MYSQL_DATABASE \
-    -sse 'update setting set value="false" where name="api.security.enabled";')
+    -sse 'update setting set value="false" where name="api.security.enabled";' || true
 
   docker rm -fv rancher-bootstrap >/dev/null 2>&1 || true
   ID=$(docker run -d \
