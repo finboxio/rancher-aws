@@ -45,8 +45,9 @@ rancher:
     last-words:
       image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ "last-words" ]
+      restart: always
       net: host
-      stdin_open: true
+      tty: true
       labels:
         - io.rancher.os.scope=system
       environment:
