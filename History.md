@@ -1,4 +1,10 @@
 
+0.0.5 / 2016-07-23
+==================
+
+  * fix galera url concatenation
+  * set unhealthy status to fall count after parent failure
+
 0.0.4 / 2016-07-22
 ==================
 
