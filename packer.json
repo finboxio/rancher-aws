@@ -52,8 +52,11 @@
       "type": "shell",
       "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
       "inline": [
-        "docker pull rancher/server:latest",
-        "docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}"
+        "docker pull rancher/server:v1.1.2",
+        "docker pull rancher/agent:v1.0.2",
+        "docker pull rancher/agent-instance:v0.8.3",
+        "docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}",
+        "system-docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}"
       ]
     }
   ],
