@@ -4,6 +4,7 @@ CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
 RANCHER_URL=${RANCHER_URL:?"RANCHER_URL must be set"}
 RANCHER_PORT=${RANCHER_PORT:-80}
 HOSTNAME=${HOSTNAME}
+PUBLIC_IP=$(dig +short myip.opendns.com @resolver2.opendns.com)
 
 function success () {
   echo -ne "HTTP/1.1 200 OK\r\n"
@@ -120,8 +121,12 @@ fi
 # Initiate a database snapshot
 #
 
-echo "Initiating mysql snapshot" | slack -p -a "warning" &> /dev/null
+echo "Initiating mysql snapshot from $PUBLIC_IP" | slack -p -a "warning" &> /dev/null
 result=$(docker exec mysql mysql-backup)
-echo "Successfully created snapshot $result" | slack -p -a "warning" &> /dev/null
+if [[ "$result" != "" ]]; then
+  echo "Host $PUBLIC_IP successfully created snapshot $result" | slack -p -a "good" &> /dev/null
+else
+  echo "Host $PUBLIC_IP failed to create a snapshot" | slack -p -a "danger" &> /dev/null
+fi
 
 success
