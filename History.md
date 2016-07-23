@@ -1,4 +1,10 @@
 
+0.0.7 / 2016-07-23
+==================
+
+  * improve mysql leader monitoring, improve rancher bootstrapping to avoid conflicts
+  * cleanup snapshot message on termination
+
 0.0.6 / 2016-07-23
 ==================
 
