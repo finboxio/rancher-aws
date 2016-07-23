@@ -32,8 +32,8 @@ done
 
 if [[ "$primary" != "" ]]; then
 	# If there's a primary, just connect to it
-	echo "Connecting to cluster gcomm://$(echo $ips | tr ' ' ',')"
-	mysqld --wsrep_cluster_address gcomm://$(echo $ips | tr ' ' ',')
+	echo "Connecting to cluster gcomm://$(echo ${ips[@]} | xargs | tr ' ' ',')"
+	mysqld --wsrep_cluster_address gcomm://$(echo ${ips[@]} | tr ' ' ',')
 elif [[ "$valid" == "0" &&  "$self" == "${ips[0]}" ]]; then
 	# Nobody's online yet. We're the oldest so we should bootstrap.
 	echo "Bootstrapping initial cluster"
@@ -113,7 +113,7 @@ elif [[ "$valid" -gt "0" && "$valid" -eq "$total" ]]; then
 	# All other nodes are available but we've lost quorum.
 	# Pick the most advanced node to re-bootstrap and try to connect
 	mysql -h $advanced -u root -p$MYSQL_ROOT_PASSWORD -sse "SET GLOBAL wsrep_provider_options='pc.bootstrap=YES';"
-	mysqld --wsrep_cluster_address gcomm://$(echo $ips | tr ' ' ',')
+	mysqld --wsrep_cluster_address gcomm://$(echo ${ips[@]} | tr ' ' ',')
 else
 	echo 'MySQL bootstrap failed. Exiting in 10s'
 	sleep 10
