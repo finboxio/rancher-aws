@@ -39,8 +39,8 @@ function check_health () {
   if [[ "$healthy" != "true" && "$passed" == "true" ]]; then
     rising="true"
     unhealthy=$((unhealthy - 1))
-    if [[ "$unhealthy" -gt "$RISE_COUNT" ]]; then
-      unhealthy=$RISE_COUNT
+    if [[ "$unhealthy" -ge "$RISE_COUNT" ]]; then
+      unhealthy=$((RISE_COUNT - 1))
     fi
     if [[ "$unhealthy" -eq 0 ]]; then
       echo "Host $PUBLIC_IP says that $pass" | slack -p -a "good" &> /dev/null
