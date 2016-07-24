@@ -1,4 +1,11 @@
 
+0.0.10 / 2016-07-24
+===================
+
+  * switch to elb health checks
+  * increase default volume size, detach mysql container from mysqlvol
+  * remove pid and gvwstate files from mysql backup
+
 0.0.9 / 2016-07-23
 ==================
 
