@@ -126,6 +126,7 @@ EXPOSE 4444
 COPY mysql/mysql-bootstrap /usr/bin/mysql-bootstrap
 COPY mysql/mysql-volume /usr/bin/mysql-volume
 COPY mysql/mysql-backup /usr/bin/mysql-backup
+COPY mysql/mysql-monitor /usr/bin/mysql-monitor
 RUN chown -R mysql:mysql /usr/bin/mysql*
 
 RUN mkdir -p /etc/mysqlchk
