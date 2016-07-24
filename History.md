@@ -1,4 +1,13 @@
 
+0.0.8 / 2016-07-23
+==================
+
+  * start rising services at RISE_COUNT - 1
+  * add mysql monitor to restore primaries in case of quorum loss
+  * don't print an unhealthy message if monitored service is rising
+  * pull additional rancher images during packer build
+  * fix possible inconsistency in cluster size & ha launch script, pin rancher version
+
 0.0.7 / 2016-07-23
 ==================
 
