@@ -49,10 +49,11 @@ if docker inspect mysql; then
   docker rm -f mysql
 fi
 
-docker run \
+docker run -d \
   --net host \
   --privileged \
   --name mysql \
+  --restart always \
   --entrypoint mysql-bootstrap \
   --label io.rancher.stack.name=os \
   --volume-driver convoy \

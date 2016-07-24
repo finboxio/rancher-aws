@@ -45,6 +45,10 @@ resource "aws_launch_configuration" "rancher-lc" {
   enable_monitoring = false
   user_data         = "${template_file.rancher-userdata-template.rendered}"
 
+  root_block_device = {
+    volume_size = 16
+  }
+
   lifecycle {
     create_before_destroy = true
   }

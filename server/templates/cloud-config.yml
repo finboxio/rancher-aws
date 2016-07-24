@@ -24,6 +24,10 @@ write_files:
       # Start the cron service for backups
       crond
 rancher:
+  environment:
+    RESIZE_DEV: /dev/xvda
+  services_include:
+    https://raw.githubusercontent.com/rancher/os-services/v0.4.5/r/resize-fs.yml: true
   services:
     status:
       image: finboxio/rancher-asg-server:${version}${dev_tag}
@@ -120,7 +124,7 @@ rancher:
     mysqlvol:
       image: finboxio/rancher-asg-server:${version}${dev_tag}
       entrypoint: [ 'mysql-volume' ]
-      restart: always
+      restart: on-failure
       net: host
       privileged: true
       labels:
