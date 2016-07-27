@@ -1,8 +1,0 @@
-[template]
-src = "haproxy.cfg.tmpl"
-dest = "/usr/local/etc/haproxy/haproxy.cfg"
-keys = [
-  "/leader"
-]
-check_cmd = "echo checking haproxy config && docker exec haproxy haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg"
-reload_cmd = "echo reloading haproxy && docker kill -s SIGHUP haproxy"

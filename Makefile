@@ -10,6 +10,7 @@ VERSION_DIRTY := $(shell git log --pretty=format:%h $(VERSION)..HEAD | wc -l)
 
 BUILD_COMMIT := $(shell if [ "$(GIT_DIRTY)" -gt "0" ]; then echo $(GIT_COMMIT)+dev; else echo $(GIT_COMMIT); fi)
 BUILD_VERSION := $(shell if [ "$(VERSION_DIRTY)" -gt "0" ] || [ "$(GIT_DIRTY)" -gt "0" ]; then echo $(VERSION)-dev; else echo $(VERSION); fi)
+BUILD_VERSION := $(shell if [ "$(GIT_BRANCH)" != "master" ]; then echo $(GIT_BRANCH)-$(VERSION); else echo $(VERSION); fi)
 
 DEBUG ?= "false"
 DEBUG_FLAG := $(shell if [ "$(DEBUG)" == "true" ]; then echo "-debug"; fi)
@@ -20,22 +21,29 @@ packer_cache:
 version:
 	@echo $(BUILD_VERSION) | tr -d '\r' | tr -d '\n' | tr -d ' '
 
-containers: container.server
-	@echo built containers at version $(BUILD_VERSION)
+images: image.server image.host
+	@echo built images at version $(BUILD_VERSION)
 
-container.server:
-	@cd images/asg \
+image.server:
+	@cd server/docker \
 		&& docker build -t $(DOCKERHUB_USER)/rancher-asg-server:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/rancher-asg-server:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/rancher-asg-server:latest . \
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-server:$(BUILD_VERSION) \
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-server:$(BUILD_VERSION)-latest \
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-server:latest
 
-images: image.server
+image.host:
+	@cd host/docker \
+		&& docker build -t $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/rancher-asg-host:latest . \
+		&& docker push $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION) \
+		&& docker push $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION)-latest \
+		&& docker push $(DOCKERHUB_USER)/rancher-asg-host:latest
 
-image.server: packer_cache container.server
-	@echo "Building server image from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
+amis: ami.server ami.host
+
+ami.server: packer_cache image.server
+	@echo "Building server ami from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
 	@echo "Version $(BUILD_VERSION), Commit $(BUILD_COMMIT)"
-	@export PACKER_CACHE_DIR=~/.packer_cache && cat packer.json \
+	@export PACKER_CACHE_DIR=~/.packer_cache && cat server/packer/packer.json \
 		| jq '.variables.version="${BUILD_VERSION}" \
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.role="server" \
@@ -44,13 +52,27 @@ image.server: packer_cache container.server
 		| .variables.dockerhub="${DOCKERHUB_USER}"' \
 		| packer build -force $(DEBUG_FLAG) -
 
-server.plan:
+ami.host: packer_cache image.host
+	@echo "Building host ami from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
+	@echo "Version $(BUILD_VERSION), Commit $(BUILD_COMMIT)"
+	@export PACKER_CACHE_DIR=~/.packer_cache && cat host/packer/packer.json \
+		| jq '.variables.version="${BUILD_VERSION}" \
+		| .variables.branch="${GIT_BRANCH}" \
+		| .variables.role="host" \
+		| .variables.commit="${BUILD_COMMIT}" \
+		| .variables.repository="${GIT_REPO}" \
+		| .variables.dockerhub="${DOCKERHUB_USER}"' \
+		| packer build -force $(DEBUG_FLAG) -
+
+cluster.plan:
 	@echo "Plan changes to terraform infrastructure"
-	@cd server && terraform plan
+	@terraform get
+	@terraform plan
 
-server.apply:
+cluster.apply:
 	@echo "Applying changes to terraform infrastructure"
-	@cd server && terraform apply
+	@terraform get
+	@terraform apply
 
-server.destroy:
-	@cd server && echo "Destroying old autoscaling groups" && terraform destroy || true
+cluster.destroy:
+	@echo "Destroying terraform infrastructure" && terraform destroy || true

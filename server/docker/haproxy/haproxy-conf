@@ -1,0 +1,90 @@
+#! /bin/bash
+
+UPDATE_INTERVAL=${UPDATE_INTERVAL:-2}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
+HAPROXY_HTTPS_REDIRECT=${HAPROXY_HTTPS_REDIRECT:-false}
+HAPROXY_MYSQL_PORT=${HAPROXY_MYSQL_PORT:-3307}
+HAPROXY_WWW_PORT=${HAPROXY_WWW_PORT:-8880}
+HAPROXY_WWW_PROXY=${HAPROXY_WWW_PROXY:-8881}
+HAPROXY_HEALTHCHECK=${HAPROXY_HEALTHCHECK:-/rancher-health}
+HAPROXY_DIR=${HAPROXY_DIR:-/etc/haproxy}
+HAPROXY_CONTAINER=${HAPROXY_CONTAINER:-haproxy}
+RANCHER_PORT=${RANCHER_PORT:-80}
+STATS_PORT=${STATS_PORT:-9090}
+MYSQL_PORT=${MYSQL_PORT:-3306}
+MYSQLCHK_PORT=${MYSQLCHK_PORT:-9200}
+
+id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+
+if [[ ! -e /etc/haproxy/haproxy.cfg.tmpl ]]; then
+	cp /usr/local/etc/haproxy/haproxy.cfg.tmpl /etc/haproxy/haproxy.cfg.tmpl
+fi
+
+if [[ ! -e /etc/haproxy/haproxy.cfg ]]; then
+	read -r -d '' config <<-EOF
+		ssl: $HAPROXY_HTTPS_REDIRECT
+		www: $HAPROXY_WWW_PORT
+		proxy: $HAPROXY_WWW_PROXY
+		galera: $HAPROXY_MYSQL_PORT
+		url: $RANCHER_HOSTNAME
+		rancher: $RANCHER_PORT
+		mysql: $MYSQL_PORT
+		mysqlchk: $MYSQLCHK_PORT
+		stats: $STATS_PORT
+		health: $HAPROXY_HEALTHCHECK
+		ip: $ip
+		members:
+			- $ip
+	EOF
+	echo "$config" > $HAPROXY_DIR/config.yml
+	gotpl $HAPROXY_DIR/haproxy.cfg.tmpl < $HAPROXY_DIR/config.yml > $HAPROXY_DIR/haproxy.cfg
+fi
+
+while true; do
+	# Wait for next check interval
+	sleep $UPDATE_INTERVAL
+
+	# Get current memberlist and config
+	members=$(serf members -format json | jq -r '.members | sort_by(.tags.up) | .[] | select(.status == "alive") | .addr' | awk -F: '{ print "  - "$1 }')
+	previous=$(cat $HAPROXY_DIR/config.yml)
+	read -r -d '' config <<-EOF
+		ssl: $HAPROXY_HTTPS_REDIRECT
+		www: $HAPROXY_WWW_PORT
+		proxy: $HAPROXY_WWW_PROXY
+		galera: $HAPROXY_MYSQL_PORT
+		url: $RANCHER_HOSTNAME
+		rancher: $RANCHER_PORT
+		mysql: $MYSQL_PORT
+		mysqlchk: $MYSQLCHK_PORT
+		stats: $STATS_PORT
+		health: $HAPROXY_HEALTHCHECK
+		ip: $ip
+		members:
+			$members
+	EOF
+
+	# Check if config has changed
+	if [[ "$config" != "$previous" ]]; then
+
+		echo "Previous: "
+		echo "$previous"
+		echo ""
+		echo "New: "
+		echo "$config"
+
+		# Generate new template
+		echo "$config" > $HAPROXY_DIR/config.yml
+		gotpl $HAPROXY_DIR/haproxy.cfg.tmpl < $HAPROXY_DIR/config.yml > $HAPROXY_DIR/haproxy.cfg.pre
+
+		# Check that config is valid
+		if haproxy -c -f $HAPROXY_DIR/haproxy.cfg.pre; then
+			mv $HAPROXY_DIR/haproxy.cfg.pre $HAPROXY_DIR/haproxy.cfg
+			docker restart $HAPROXY_CONTAINER
+			echo "Successfully reloaded HAProxy on host $ip" | slack -p -a 'good'
+		else
+			echo "Failed to reload HAProxy on host $ip" | slack -p -a 'danger'
+		fi
+
+	fi
+done

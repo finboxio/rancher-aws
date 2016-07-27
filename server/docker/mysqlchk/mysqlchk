@@ -1,0 +1,30 @@
+#! /bin/bash
+
+MYSQL_HOST=${MYSQL_HOST:-localhost}
+MYSQL_PORT=${MYSQL_PORT:-3306}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?"MYSQL_ROOT_PASSWORD must be set"}
+
+status=$(mysql \
+  --host=$MYSQL_HOST \
+  --port=$MYSQL_PORT \
+  --user=root \
+  --password=$MYSQL_ROOT_PASSWORD \
+  -sse "select VARIABLE_VALUE from information_schema.SESSION_STATUS where VARIABLE_NAME = 'wsrep_cluster_status';" 2>/dev/null)
+
+if [ "$status" == "Primary" ]; then
+  # mysql is fine, return http 200
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 21\r\n"
+  echo -ne "\r\n"
+  echo -ne "MySQL is running.\r\n"
+  echo -ne "\r\n"
+else
+  # mysql is fine, return http 503
+  echo -ne "HTTP/1.1 503 Service Unavailable\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 18\r\n"
+  echo -ne "\r\n"
+  echo -ne "MySQL is down.\r\n"
+  echo -ne "\r\n"
+fi
