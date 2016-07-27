@@ -1,3 +1,4 @@
-server/vars.tf
+.terraform
 *.tfstate
 *.tfstate.backup
+rancher.tf

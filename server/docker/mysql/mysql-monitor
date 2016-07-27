@@ -1,0 +1,53 @@
+#! /bin/bash
+
+CHECK_INTERVAL=${CHECK_INTERVAL:-3}
+FALL_COUNT=${FALL_COUNT:-3}
+MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
+GRACE_PERIOD=${GRACE_PERIOD:-60}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
+
+failures=0
+while true; do
+  # If mysql is not running, continue on
+  if ! (docker inspect $MYSQL_CONTAINER &> /dev/null); then sleep $CHECK_INTERVAL; continue; fi
+
+  # Allow grace period before starting monitor
+  current=$(date +%s)
+  started=$(date -d "$(docker inspect $MYSQL_CONTAINER \
+    | jq -r .[0].State.StartedAt \
+    | cut -d . -f 1 \
+    | awk '{print $1}' \
+    | tr 'T' ' ')" +%s)
+  uptime=$((current - started))
+  if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then sleep $CHECK_INTERVAL; continue; fi
+
+  ips=($(serf members -format json | jq -r '.members | sort_by(.tags.up) | .[] | select(.status == "alive") | .addr' | awk -F: '{ print $1 }'))
+
+  valid=0
+  total=0
+  primary=
+  advanced=${ips[0]}
+  commits=0
+  for ip in "${ips[@]}"; do
+    total=$((total + 1))
+    if mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "show status like 'wsrep%'" &> /dev/null; then
+      valid=$((valid + 1))
+      status=$(mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "show status like 'wsrep_cluster_status'" | awk '{ print $2 }')
+      commit=$(mysql -h $ip -u root -p$MYSQL_ROOT_PASSWORD -sse "show status like 'wsrep_last_committed'" | awk '{ print $2 }')
+      if [[ "$status" == "Primary" ]]; then primary=$ip; fi
+      if [[ "$commit" -gt "$commits" ]]; then advanced=$ip; commits=$commit; fi
+    fi
+  done
+
+  if [[ "$primary" == "" && "$valid" -gt "0" && "$valid" -eq "$total" ]]; then
+    failures=$((failures + 1))
+    if [[ "$failures" -eq $FALL_COUNT ]]; then
+      # All reachable nodes are running mysql but we've lost quorum.
+      # Pick the most advanced node to re-bootstrap and try to connect
+      mysql -h $advanced -u root -p$MYSQL_ROOT_PASSWORD -sse "SET GLOBAL wsrep_provider_options='pc.bootstrap=YES';"
+      failures=$((FALL_COUNT * -1))
+    fi
+  fi
+
+  sleep $CHECK_INTERVAL
+done

@@ -1,0 +1,7 @@
+#! /bin/bash
+TERMINATOR_PORT=${TERMINATOR_PORT:-9999}
+
+cp /etc/terminator/service /etc/xinetd.d/terminator
+sed -i "s/\${TERMINATOR_PORT}/$TERMINATOR_PORT/" /etc/xinetd.d/terminator
+echo "terminator $TERMINATOR_PORT/tcp" >> /etc/services
+/usr/sbin/xinetd -dontfork

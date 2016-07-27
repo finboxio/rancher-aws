@@ -1,4 +1,0 @@
-#! /bin/bash
-cp /etc/mysqlchk/service /etc/xinetd.d/mysqlchk
-echo "mysqlchk 9200/tcp" >> /etc/services
-/usr/sbin/xinetd -dontfork
