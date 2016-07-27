@@ -1,4 +1,10 @@
 
+0.1.0 / 2016-07-27
+==================
+
+  * Merge pull request #1 from finboxio/blue-green
+  * functional blue-green server infrastructure, organized into terraform modules
+
 0.0.10 / 2016-07-24
 ===================
 
