@@ -1,4 +1,10 @@
 
+0.1.1 / 2016-08-01
+==================
+
+  * reorganize terraform, fix auto registration/deregistration and other bugs
+  * add rancher environment module for autoscaling host groups
+
 0.1.0 / 2016-07-27
 ==================
 
