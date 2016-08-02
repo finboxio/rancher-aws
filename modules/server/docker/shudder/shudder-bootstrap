@@ -1,10 +1,22 @@
 #! /bin/bash
 
 SQS_URL=${SQS_URL:?"SQS_URL must be set"}
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+RANCHER_PORT=${RANCHER_PORT:?"RANCHER_PORT must be set"}
 TERMINATOR_PORT=${TERMINATOR_PORT:-9999}
 
 region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
 self=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+public=$(curl http://instance-data/latest/meta-data/public-ipv4)
+
+aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
+if [[ -e ./credentials ]]; then source ./credentials; fi
+
+if [[ "$CATTLE_ACCESS_KEY" == "" || "$CATTLE_SECRET_KEY" == "" ]]; then
+  echo "Rancher credentials are not yet available. Exiting in 30s."
+  sleep 30
+  exit 1
+fi
 
 while true; do
   sleep 3
@@ -38,14 +50,93 @@ while true; do
 
       echo "Received an ASG termination notification for host $instance_ip ($instance_id)" | slack -p -a 'warning'
 
-      # Tell the instance to gracefully remove itself
-      curl -sf $instance_ip:$TERMINATOR_PORT
-
       # Remove the message from the queue
       aws sqs delete-message \
         --region $region \
         --queue-url $SQS_URL \
         --receipt-handle $receipt_handle
+
+      # Tell the instance to gracefully remove itself
+      curl -sf $instance_ip:$TERMINATOR_PORT
+      status=$?
+
+      host_id=$(curl -sf -X GET \
+        -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        -H 'Accept: application/json' \
+        "http://localhost:${RANCHER_PORT}/v1/hosts?name=${instance_id}" \
+        | jq -r ".data[] | .id")
+
+      # If this host is still registered in rancher, try to remove it
+      if [[ "$host_id" != "" ]]; then
+        echo "Decommissioning rancher agent $host_id..." | \
+              slack -p -a "warning" &> /dev/null
+
+        state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:${RANCHER_PORT}/v1/hosts/${host_id}/?action=deactivate | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "inactive" ]]; do
+          state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+            http://localhost:${RANCHER_PORT}/v1/hosts/$host_id | jq -r .state)
+          sleep 1
+        done
+
+        if [[ "$state" == "" ]]; then
+          echo "Could not deactivate host ${instance_id}. Check the host's status at http://localhost:${RANCHER_PORT}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+            | slack -p -a 'warning' &> /dev/null
+        fi
+
+        echo "Removing $host_id" | slack -p -a "#000000" &> /dev/null
+        state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:${RANCHER_PORT}/v1/hosts/$host_id/?action=remove | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "removed" ]]; do
+          state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+            http://localhost:${RANCHER_PORT}/v1/hosts/$host_id | jq -r .state)
+        done
+
+        if [[ "$state" == "" ]]; then
+          echo "Could not remove host ${instance_id}. Check the host's status at http://localhost:${RANCHER_PORT}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+            | slack -p -a 'warning' &> /dev/null
+        fi
+
+        echo "Purging $host_id" | slack -p -a "#000000" &> /dev/null
+        state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:${RANCHER_PORT}/v1/hosts/$host_id/?action=purge | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "purged" ]]; do
+          state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+            http://localhost:${RANCHER_PORT}/v1/hosts/$host_id | jq -r .state)
+        done
+
+        if [[ "$state" == "" ]]; then
+          echo "Could not purge host ${instance_id}. Check the host's status at http://localhost:${RANCHER_PORT}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+            | slack -p -a 'warning' &> /dev/null
+        fi
+
+        echo "Successfully decommissioned rancher agent $host_id" | \
+          slack -p -a "good" &> /dev/null
+      fi
+
+      # Update the last backup
+      echo "Initiating mysql snapshot from $public" | slack -p -a "warning" &> /dev/null
+      result=$(docker exec mysql mysql-backup)
+      if [[ "$result" != "" ]]; then
+        echo "Host $public successfully created snapshot $result" | slack -p -a "good" &> /dev/null
+      else
+        echo "Host $public failed to create a snapshot" | slack -p -a "danger" &> /dev/null
+      fi
 
       # Tell AWS it's safe to continue terminating this instance
       aws autoscaling complete-lifecycle-action \
