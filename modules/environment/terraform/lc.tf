@@ -1,15 +1,11 @@
-resource "atlas_artifact" "rancher-asg-host" {
+data "atlas_artifact" "rancher-asg-host" {
   name = "finboxio/rancher-asg-host"
   type = "amazon.image"
   version = "${var.rancher_asg_host_version}"
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
-resource "template_file" "rancher-userdata-template" {
-  template = "${file(concat(path.module, "/templates/cloud-config.yml"))}"
+data "template_file" "rancher-userdata-template" {
+  template = "${file(format("%s/%s", path.module, "templates/cloud-config.yml"))}"
 
   vars {
     rancher_hostname       = "${var.rancher_hostname}"
@@ -17,16 +13,12 @@ resource "template_file" "rancher-userdata-template" {
     environment_name       = "${var.name}"
     environment_type       = "${var.type}"
     slack_webhook          = "${var.slack_webhook}"
-    version                = "${atlas_artifact.rancher-asg-host.metadata_full.version}"
-  }
-
-  lifecycle {
-    create_before_destroy = true
+    version                = "${data.atlas_artifact.rancher-asg-host.metadata_full.version}"
   }
 }
 
 resource "aws_launch_configuration" "rancher-lc" {
-  image_id             = "${element(split(",", atlas_artifact.rancher-asg-host.metadata_full.ami_id), index(split(",", atlas_artifact.rancher-asg-host.metadata_full.region), var.region))}"
+  image_id             = "${element(split(",", data.atlas_artifact.rancher-asg-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-asg-host.metadata_full.region), var.region))}"
   name_prefix          = "${var.deployment_id}-rancher-${var.name}-"
   instance_type        = "${var.instance_type}"
   spot_price           = "${var.spot_price}"
@@ -40,7 +32,7 @@ resource "aws_launch_configuration" "rancher-lc" {
 
   ebs_optimized     = "${var.ebs_optimized}"
   enable_monitoring = false
-  user_data         = "${template_file.rancher-userdata-template.rendered}"
+  user_data         = "${data.template_file.rancher-userdata-template.rendered}"
 
   root_block_device = {
     volume_size = 16

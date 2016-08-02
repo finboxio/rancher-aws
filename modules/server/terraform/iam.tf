@@ -1,7 +1,7 @@
 resource "aws_iam_role" "rancher-ec2-iam-role" {
   name               = "${var.deployment_id}-rancher-ec2-iam-role"
   path               = "/"
-  assume_role_policy = "${file(concat(path.module, "/templates/ec2-role.json"))}"
+  assume_role_policy = "${file(format("%s/%s", path.module, "templates/ec2-role.json"))}"
 
   lifecycle {
     create_before_destroy = true
@@ -18,23 +18,19 @@ resource "aws_iam_instance_profile" "rancher-ec2-iam-profile" {
   }
 }
 
-resource "template_file" "rancher-ec2-policy-data" {
-  template = "${file(concat(path.module, "/templates/ec2-policy.json"))}"
+data "template_file" "rancher-ec2-policy-data" {
+  template = "${file(format("%s/%s", path.module, "templates/ec2-policy.json"))}"
 
   vars {
     name          = "rancher"
     deployment_id = "${var.deployment_id}"
-  }
-
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
 resource "aws_iam_policy" "rancher-ec2-iam-policy" {
   name   = "${var.deployment_id}-rancher-ec2-iam-policy"
   path   = "/"
-  policy = "${template_file.rancher-ec2-policy-data.rendered}"
+  policy = "${data.template_file.rancher-ec2-policy-data.rendered}"
 
   lifecycle {
     create_before_destroy = true
@@ -54,29 +50,25 @@ resource "aws_iam_policy_attachment" "rancher-ec2-iam-attachment" {
 resource "aws_iam_role" "rancher-asg-iam-role" {
   name               = "${var.deployment_id}-rancher-asg-iam-role"
   path               = "/"
-  assume_role_policy = "${file(concat(path.module, "/templates/asg-role.json"))}"
+  assume_role_policy = "${file(format("%s/%s", path.module, "templates/asg-role.json"))}"
 
   lifecycle {
     create_before_destroy = true
   }
 }
 
-resource "template_file" "rancher-asg-policy-data" {
-  template = "${file(concat(path.module, "/templates/asg-policy.json"))}"
+data "template_file" "rancher-asg-policy-data" {
+  template = "${file(format("%s/%s", path.module, "templates/asg-policy.json"))}"
 
   vars {
     sqs_arn = "${aws_sqs_queue.rancher-terminations.arn}"
-  }
-
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
 resource "aws_iam_policy" "rancher-asg-iam-policy" {
   name   = "${var.deployment_id}-rancher-asg-iam-policy"
   path   = "/"
-  policy = "${template_file.rancher-asg-policy-data.rendered}"
+  policy = "${data.template_file.rancher-asg-policy-data.rendered}"
 
   lifecycle {
     create_before_destroy = true

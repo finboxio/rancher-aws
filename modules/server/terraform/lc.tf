@@ -1,15 +1,11 @@
-resource "atlas_artifact" "rancher-asg-server" {
+data "atlas_artifact" "rancher-asg-server" {
   name = "finboxio/rancher-asg-server"
   type = "amazon.image"
   version = "${var.rancher_asg_server_version}"
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
-resource "template_file" "rancher-userdata-template" {
-  template = "${file(concat(path.module, "/templates/cloud-config.yml"))}"
+data "template_file" "rancher-userdata-template" {
+  template = "${file(format("%s/%s", path.module, "templates/cloud-config.yml"))}"
 
   vars {
     mysql_root_password    = "${var.mysql_root_password}"
@@ -24,16 +20,12 @@ resource "template_file" "rancher-userdata-template" {
     slack_webhook          = "${var.slack_webhook}"
     shudder_sqs_url        = "${aws_sqs_queue.rancher-terminations.id}"
     cluster_size           = "${var.cluster_size}"
-    version                = "${atlas_artifact.rancher-asg-server.metadata_full.version}"
-  }
-
-  lifecycle {
-    create_before_destroy = true
+    version                = "${data.atlas_artifact.rancher-asg-server.metadata_full.version}"
   }
 }
 
 resource "aws_launch_configuration" "rancher-lc" {
-  image_id             = "${element(split(",", atlas_artifact.rancher-asg-server.metadata_full.ami_id), index(split(",", atlas_artifact.rancher-asg-server.metadata_full.region), var.region))}"
+  image_id             = "${element(split(",", data.atlas_artifact.rancher-asg-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-asg-server.metadata_full.region), var.region))}"
   name_prefix          = "${var.deployment_id}-rancher-"
   instance_type        = "${var.instance_type}"
   spot_price           = "${var.spot_price}"
@@ -47,7 +39,7 @@ resource "aws_launch_configuration" "rancher-lc" {
 
   ebs_optimized     = "${var.ebs_optimized}"
   enable_monitoring = false
-  user_data         = "${template_file.rancher-userdata-template.rendered}"
+  user_data         = "${data.template_file.rancher-userdata-template.rendered}"
 
   root_block_device = {
     volume_size = 16
