@@ -1,4 +1,5 @@
 .terraform
 *.tfstate
 *.tfstate.backup
-rancher.tf
+*.tfvars
+vars_override.tf

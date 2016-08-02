@@ -1,0 +1,78 @@
+#! /bin/bash
+
+MYSQL_DATA_DIR=${MYSQL_DATA_DIR:-/etc/mysql/data}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:-rancher-mysql-backup}
+MYSQL_IMAGE=${MYSQL_IMAGE?"MYSQL_IMAGE must be set"}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
+RANCHER_MYSQL_USER=${RANCHER_MYSQL_USER:?"RANCHER_MYSQL_USER must be set"}
+RANCHER_MYSQL_PASSWORD=${RANCHER_MYSQL_PASSWORD:?"RANCHER_MYSQL_PASSWORD must be set"}
+RANCHER_MYSQL_DATABASE=${RANCHER_MYSQL_DATABASE:?"RANCHER_MYSQL_DATABASE must be set"}
+MYSQL_HOST=${MYSQL_HOST:-localhost}
+MYSQL_PORT=${MYSQL_PORT:-3306}
+MYSQL_VOLUME_NAME=${MYSQL_VOLUME_NAME:-mysqlvol}
+MYSQL_VOLUME_SIZE=${MYSQL_VOLUME_SIZE:-12G}
+
+REGION=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
+INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
+
+alias convoy="docker exec convoy convoy"
+
+echo 'Setting up mysql volume'
+volume=$(convoy inspect $MYSQL_VOLUME_NAME | jq -r .Name)
+if [[ "$volume" == "" || "$volume" == "null" ]]; then
+
+  pending_backups=$(aws ec2 describe-snapshots \
+    --filters Name=tag:rancher-cluster-id,Values=$RANCHER_HOSTNAME \
+    --region $REGION \
+    | jq '.Snapshots | sort_by(.StartTime) | reverse | .[] | select(.State == "pending")' \
+    | jq -s -r length)
+
+  while [[ "$pending_backups" -gt "0" ]]; do
+    echo 'Waiting for pending snapshot to be ready...'
+    sleep 10
+    pending_backups=$(aws ec2 describe-snapshots --filters Name=tag:rancher-cluster-id,Values=$RANCHER_HOSTNAME --region $REGION | jq '.Snapshots | sort_by(.StartTime) | reverse | .[] | select(.State == "pending")' | jq -s -r length)
+  done
+
+  latest_backup=$(aws ec2 describe-snapshots \
+    --filters Name=tag:rancher-cluster-id,Values=$RANCHER_HOSTNAME \
+    --region $REGION \
+    | jq '.Snapshots | sort_by(.StartTime) | reverse | .[] | select(.State == "completed")' \
+    | jq -s -r '.[0].SnapshotId')
+
+  if [[ "$latest_backup" != "" && "$latest_backup" != "null" ]]; then
+    echo "Restoring mysql data dir from snapshot $latest_backup"
+    convoy create --size $MYSQL_VOLUME_SIZE --backup ebs://$REGION/$latest_backup $MYSQL_VOLUME_NAME
+  else
+    echo "Creating new volume for mysql data dir"
+    convoy create --size $MYSQL_VOLUME_SIZE $MYSQL_VOLUME_NAME
+  fi
+
+  vol_id=$(convoy inspect $MYSQL_VOLUME_NAME | jq -r .DriverInfo.EBSVolumeID)
+  dev=$(convoy inspect $MYSQL_VOLUME_NAME | jq -r .DriverInfo.Device | sed 's/dev\/xvd/dev\/sd/')
+  aws ec2 modify-instance-attribute --instance-id $INSTANCE_ID --block-device-mappings --region $REGION '[{ "DeviceName": "'$dev'", "Ebs": { "DeleteOnTermination": true } }]'
+
+fi
+
+if docker inspect mysql; then
+  docker rm -f mysql
+fi
+
+docker run -d \
+  --net host \
+  --privileged \
+  --name mysql \
+  --restart always \
+  --entrypoint mysql-bootstrap \
+  --label io.rancher.stack.name=os \
+  --volume-driver convoy \
+  -v $MYSQL_VOLUME_NAME:$MYSQL_DATA_DIR \
+  -v /var/run:/var/run \
+  -e MYSQL_HOST=${MYSQL_HOST} \
+  -e MYSQL_PORT=${MYSQL_PORT} \
+  -e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
+  -e MYSQL_DATA_DIR=${MYSQL_DATA_DIR} \
+  -e MYSQL_USER=${RANCHER_MYSQL_USER} \
+  -e MYSQL_PASSWORD=${RANCHER_MYSQL_PASSWORD} \
+  -e MYSQL_DATABASE=${RANCHER_MYSQL_DATABASE} \
+  -e RANCHER_HOSTNAME=${RANCHER_HOSTNAME} \
+  ${MYSQL_IMAGE}

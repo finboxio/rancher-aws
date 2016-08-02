@@ -1,0 +1,13 @@
+#!/bin/bash
+
+PUBLIC_IP=$(curl http://instance-data/latest/meta-data/public-ipv4)
+
+die()
+{
+    echo ":skull: Host $PUBLIC_IP is shutting down" | slack -p -a "danger"
+    exit 0
+}
+
+trap die TERM
+
+read UNTIL_I_DIE

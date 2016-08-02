@@ -1,0 +1,128 @@
+#!/bin/bash
+
+INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
+PUBLIC_IP=$(curl -s http://instance-data/latest/meta-data/public-ipv4)
+RANCHER_SCHEME=${RANCHER_SCHEME:?"RANCHER_SCHEME must be set"}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+TOKEN_FILE=${TOKEN_FILE:?"TOKEN_FILE must be set"}
+
+function success () {
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+function error () {
+  echo -ne "HTTP/1.1 500 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+while read line
+do
+  test "$line" = $'\r' && break
+done
+
+echo "Rancher server $INSTANCE_ID received a termination signal" | \
+  slack -p -a "warning" &> /dev/null
+
+aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
+if [[ -e ./credentials ]]; then source ./credentials; fi
+
+aws s3 cp ${TOKEN_FILE} token &> /dev/null || true
+if [[ -e ./token ]]; then source ./token; fi
+
+#
+# Gracefully stop all services
+#
+
+if [[ "$CATTLE_ACCESS_KEY" != "" && "$CATTLE_SECRET_KEY" != "" ]]; then
+
+  host_id=$(curl -sf -X GET \
+      -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -H 'Accept: application/json' \
+      "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts?name=${INSTANCE_ID}" \
+      | jq -r ".data[] | .id")
+
+  if [[ "$host_id" != "" ]]; then
+    echo "Decommissioning rancher agent $host_id..." | \
+          slack -p -a "warning" &> /dev/null
+
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/${host_id}/?action=deactivate | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "inactive" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/$host_id | jq -r .state)
+      sleep 1
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not deactivate host ${INSTANCE_ID}. Check the host's status at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+        | slack -p -a 'warning' &> /dev/null
+    fi
+
+    echo "Removing $host_id" | slack -p -a "#000000" &> /dev/null
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/$host_id/?action=remove | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "removed" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/$host_id | jq -r .state)
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not remove host ${INSTANCE_ID}. Check the host's status at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+        | slack -p -a 'warning' &> /dev/null
+    fi
+
+    echo "Purging $host_id" | slack -p -a "#000000" &> /dev/null
+    state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+      -X POST \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/$host_id/?action=purge | jq -r .state)
+
+    while [[ "$state" != "" && "$state" != "purged" ]]; do
+      state=$(curl -sf -u "${CATTLE_ACCESS_KEY}:${CATTLE_SECRET_KEY}" \
+        ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts/$host_id | jq -r .state)
+    done
+
+    if [[ "$state" == "" ]]; then
+      echo "Could not purge host ${INSTANCE_ID}. Check the host's status at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/env/${RANCHER_ENVIRONMENT_ID}/infra/hosts." \
+        | slack -p -a 'warning' &> /dev/null
+    fi
+
+    echo "Successfully decommissioned rancher agent $host_id" | \
+      slack -p -a "good" &> /dev/null
+  else
+    echo "Hostname ${INSTANCE_ID} is not registered with rancher. Skipping host deactivation." | \
+      slack -p -a "danger" &> /dev/null
+  fi
+else
+  echo "Rancher credentials are not available to ${INSTANCE_ID}. You may need to deactivate this host manually at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}" | \
+    slack -p -a "danger" &> /dev/null
+fi
+
+docker stop health &> /dev/null || true
+
+docker exec serf serf leave &> /dev/null || true
+docker stop serf &> /dev/null || true
+
+success

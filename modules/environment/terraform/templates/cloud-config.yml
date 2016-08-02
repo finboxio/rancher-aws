@@ -1,0 +1,73 @@
+#cloud-config
+rancher:
+  environment:
+    TERMINATOR_PORT: 9999
+    HEALTH_PORT: 9200
+    SLACK_WEBHOOK_URL: ${slack_webhook}
+    SLACK_USERNAME: Rancher
+    SLACK_ICON: cow
+    RANCHER_HOSTNAME: ${rancher_hostname}
+    RANCHER_SCHEME: https
+    CREDENTIALS_FILE: s3://${s3_bucket}/credentials
+    TOKEN_FILE: s3://${s3_bucket}/${environment_name}.token
+    ENVIRONMENT_NAME: ${environment_name}
+    ENVIRONMENT_TYPE: ${environment_type}
+  services:
+    serf:
+      image: finboxio/rancher-asg-host:${version}
+      entrypoint: [ "serf-bootstrap" ]
+      restart: always
+      net: host
+      volumes:
+        - /etc/serf:/etc/serf
+    shudder:
+      image: finboxio/rancher-asg-host:${version}
+      entrypoint: [ 'shudder-bootstrap' ]
+      restart: on-failure
+      net: host
+      environment:
+        - SLACK_*
+        - TERMINATOR_PORT
+    terminator:
+      image: finboxio/rancher-asg-host:${version}
+      entrypoint: [ 'terminator-bootstrap' ]
+      restart: on-failure
+      net: host
+      tty: true
+      environment:
+        - SLACK_*
+        - RANCHER_*
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+        - TERMINATOR_PORT
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /usr/bin/docker:/usr/bin/docker
+    health:
+      image: finboxio/rancher-asg-host:${version}
+      entrypoint: [ 'health-bootstrap' ]
+      restart: on-failure
+      net: host
+      tty: true
+      environment:
+        - SLACK_*
+        - RANCHER_*
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+        - HEALTH_PORT
+    register:
+      image: finboxio/rancher-asg-host:${version}
+      entrypoint: [ 'rancher-bootstrap' ]
+      restart: on-failure
+      net: host
+      environment:
+        - SLACK_*
+        - RANCHER_*
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+        - ENVIRONMENT_NAME
+        - ENVIRONMENT_TYPE
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /usr/bin/docker:/usr/bin/docker
+        - /var/lib/rancher:/var/lib/rancher

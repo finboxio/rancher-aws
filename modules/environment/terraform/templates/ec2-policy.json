@@ -1,0 +1,55 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "s3:*",
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::${s3_bucket}",
+        "arn:aws:s3:::${s3_bucket}/*"
+      ]
+    },
+    {
+      "Action": "ec2:DescribeVolumes",
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Action": [ "ec2:AttachVolume", "ec2:DetachVolume" ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:ec2:*:*:volume/*",
+      "Condition": {
+          "StringLike": {
+              "ec2:ResourceTag/Name": "${deployment_id}-rancher*"
+          }
+      }
+    },
+    {
+      "Action": [ "ec2:AttachVolume", "ec2:DetachVolume" ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+          "StringEquals": {
+              "ec2:ResourceTag/Name": "${deployment_id}-rancher*"
+          }
+      }
+    },
+    {
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "ec2:DescribeInstances",
+        "ec2:DescribeSnapshots",
+        "ec2:CreateSnapshot",
+        "ec2:CreateTags",
+        "ec2:DeleteSnapshot",
+        "ec2:CreateVolume",
+        "ec2:DescribeSpotInstanceRequests",
+        "ec2:RequestSpotInstances",
+        "ec2:CancelSpotInstanceRequests",
+        "ec2:TerminateInstances"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}

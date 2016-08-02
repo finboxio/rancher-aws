@@ -1,0 +1,6 @@
+#cloud-config
+rancher:
+  services_include:
+    https://raw.githubusercontent.com/rancher/os-services/v0.4.5/r/resize-fs.yml: true
+  environment:
+    RESIZE_DEV: /dev/xvda

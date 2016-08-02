@@ -1,0 +1,15 @@
+# default: on
+# description: health
+service health
+{
+    flags           = REUSE
+    socket_type     = stream
+    port            = ${HEALTH_PORT}
+    wait            = no
+    user            = root
+    server          = /usr/bin/health
+    log_on_failure  += USERID
+    disable         = no
+    only_from       = 0.0.0.0/0
+    per_source      = UNLIMITED
+}

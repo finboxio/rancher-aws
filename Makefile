@@ -32,7 +32,7 @@ image.server:
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-server:latest
 
 image.host:
-	@cd host/docker \
+	@cd environment/docker \
 		&& docker build -t $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/rancher-asg-host:latest . \
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION) \
 		&& docker push $(DOCKERHUB_USER)/rancher-asg-host:$(BUILD_VERSION)-latest \
@@ -55,7 +55,7 @@ ami.server: packer_cache image.server
 ami.host: packer_cache image.host
 	@echo "Building host ami from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
 	@echo "Version $(BUILD_VERSION), Commit $(BUILD_COMMIT)"
-	@export PACKER_CACHE_DIR=~/.packer_cache && cat host/packer/packer.json \
+	@export PACKER_CACHE_DIR=~/.packer_cache && cat environment/packer/packer.json \
 		| jq '.variables.version="${BUILD_VERSION}" \
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.role="host" \

@@ -1,0 +1,53 @@
+#! /bin/bash
+
+MYSQL_DATA_DIR=${MYSQL_DATA_DIR:-/etc/mysql/data}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?"MYSQL_ROOT_PASSWORD must be set"}
+MYSQL_HOST=${MYSQL_HOST:-localhost}
+MYSQL_VOLUME_NAME=${MYSQL_VOLUME_NAME:-mysqlvol}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
+
+REGION=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
+IP=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+DESCRIPTION='Rancher mysql database backup'
+VOLUME_ID=$(convoy inspect $MYSQL_VOLUME_NAME | jq -r .DriverInfo.EBSVolumeID)
+
+if [[ "$VOLUME_ID" == "" ]]; then
+  echo "Failed to retrieve id of volume to be snapshotted $MYSQL_VOLUME_NAME"
+  exit 1
+fi
+
+cat <<EOF > /tmp/prefreeze
+#! /bin/bash
+uuid=\$(mysql -u root -p${MYSQL_ROOT_PASSWORD} --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_local_state_uuid';")
+seqno=\$(mysql -u root -p${MYSQL_ROOT_PASSWORD} --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_last_committed';")
+cp ${MYSQL_DATA_DIR}/grastate.dat /tmp/grastate.dat.bak
+mv ${MYSQL_DATA_DIR}/gvwstate.dat /tmp/gvwstate.dat.bak
+mv ${MYSQL_DATA_DIR}/${IP}.pid /tmp/${IP}.pid
+sed -i "s/uuid:.*/uuid: \$uuid/" ${MYSQL_DATA_DIR}/grastate.dat
+sed -i "s/seqno:.*/seqno: \$seqno/" ${MYSQL_DATA_DIR}/grastate.dat
+EOF
+
+cat <<-EOF > /tmp/postthaw
+#! /bin/bash
+mv /tmp/grastate.dat.bak ${MYSQL_DATA_DIR}/grastate.dat
+mv /tmp/gvwstate.dat.bak ${MYSQL_DATA_DIR}/gvwstate.dat
+mv /tmp/${IP}.pid ${MYSQL_DATA_DIR}/${IP}.pid
+EOF
+
+chmod +x /tmp/prefreeze
+chmod +x /tmp/postthaw
+
+ec2-consistent-snapshot \
+  --use-iam-role \
+  --region $REGION \
+  --description "$DESCRIPTION" \
+  --tag "rancher-cluster-id=$RANCHER_HOSTNAME;Name=rancher-backup" \
+  --freeze-filesystem $MYSQL_DATA_DIR \
+  --mysql \
+  --mysql-username root \
+  --mysql-password $MYSQL_ROOT_PASSWORD \
+  --mysql-host $MYSQL_HOST \
+  --pre-freeze-command /tmp/prefreeze \
+  --post-thaw-command /tmp/postthaw \
+  $DEBUG_FLAG \
+  $VOLUME_ID

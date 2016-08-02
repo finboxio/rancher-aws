@@ -1,0 +1,89 @@
+{
+  "_source_ami_info": "[US-WEST-2] Rancher OS v0.5.0 HVM",
+  "variables": {
+    "ami": "ami-f0f03190",
+    "user": "{{ env `USER` }}",
+    "atlas_token": "{{ env `ATLAS_TOKEN` }}",
+    "aws_access_key": "{{ env `AWS_ACCESS_KEY_ID` }}",
+    "aws_secret": "{{ env `AWS_SECRET_ACCESS_KEY` }}",
+    "aws_region": "{{ env `AWS_DEFAULT_REGION` }}",
+    "aws_instance_type": "m3.large",
+    "dockerhub": null,
+    "role": null,
+    "version": null,
+    "branch": null,
+    "commit": null,
+    "repository": null
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "name": "aws",
+      "access_key": "{{ user `aws_access_key` }}",
+      "secret_key": "{{ user `aws_secret` }}",
+      "region": "{{ user `aws_region` }}",
+      "source_ami": "{{ user `ami` }}",
+      "ami_name": "rancher-asg-{{ user `role` }} {{ user `version` }}",
+      "instance_type": "{{ user `aws_instance_type` }}",
+      "ami_description": "Rancher AMI ({{ user `role` }}), Version {{ user `version` }}. Built by user {{ user `user` }} from the {{ user `commit` }} commit of branch '{{ user `branch` }}' in the {{ user `repository` }} repo on {{ isotime \"2006-01-02\" }}",
+      "ssh_username": "rancher",
+      "force_deregister": true,
+      "associate_public_ip_address": true,
+      "user_data_file": "./server/packer/cloud-config.yml",
+      "ami_block_device_mappings": [{
+        "device_name": "/dev/sda1",
+        "delete_on_termination": true,
+        "volume_size": 16
+      }],
+      "launch_block_device_mappings": [{
+        "device_name": "/dev/sda1",
+        "delete_on_termination": true,
+        "volume_size": 16
+      }],
+      "tags": {
+        "Project": "rancher-asg",
+        "Name": "rancher-asg-{{ user `role` }}",
+        "Role": "{{ user `role` }}",
+        "Build": "{{ user `commit` }}",
+        "Version": "{{ user `version` }}",
+        "Branch": "{{ user `branch` }}",
+        "Timestamp": "{{ timestamp }}",
+        "Built-With": "packer",
+        "Built-By": "{{ user `user` }}"
+      },
+      "run_tags": {
+        "Project": "rancher-asg",
+        "Name": "rancher-asg-builder",
+        "Role": "builder"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
+      "inline": [
+        "docker pull rancher/server:v1.1.2",
+        "docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}",
+        "system-docker pull {{ user `dockerhub` }}/rancher-asg-{{ user `role` }}:{{ user `version` }}"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "atlas",
+      "only": [ "aws" ],
+      "token": "{{ user `atlas_token` }}",
+      "artifact": "finboxio/rancher-asg-{{ user `role` }}",
+      "artifact_type": "amazon.image",
+      "metadata": {
+        "created_at": "{{ timestamp }}",
+        "build": "{{ user `commit` }}",
+        "version": "{{ user `version` }}",
+        "branch": "{{ user `branch` }}",
+        "built_with": "packer",
+        "built_by": "{{ user `user` }}"
+      }
+    }
+  ]
+}

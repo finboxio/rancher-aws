@@ -1,0 +1,17 @@
+#! /bin/bash
+
+TERMINATOR_PORT=${TERMINATOR_PORT:-9999}
+
+self=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+
+while true; do
+  sleep 3
+  terminating=$(curl -sf http://instance-data/latest/meta-data/spot/termination-time)
+
+  if [[ "$terminating" != "" ]]; then
+    echo "Received a spot termination signal for host $self" | slack -p -a 'warning'
+    # Hit our own terminator endpoint
+    curl -sf localhost:$TERMINATOR_PORT
+    exit 0
+  fi
+done
