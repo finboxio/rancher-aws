@@ -43,7 +43,7 @@ amis: ami.server ami.host
 ami.server: packer_cache image.server
 	@echo "Building server ami from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
 	@echo "Version $(BUILD_VERSION), Commit $(BUILD_COMMIT)"
-	@export PACKER_CACHE_DIR=~/.packer_cache && cat modules/server/packer/packer.json \
+	@export PACKER_CACHE_DIR=~/.packer_cache && cd modules/server/packer && cat packer.json \
 		| jq '.variables.version="${BUILD_VERSION}" \
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.role="server" \
@@ -55,7 +55,7 @@ ami.server: packer_cache image.server
 ami.host: packer_cache image.host
 	@echo "Building host ami from $(GIT_BRANCH):$(GIT_COMMIT) of $(GIT_REPO)"
 	@echo "Version $(BUILD_VERSION), Commit $(BUILD_COMMIT)"
-	@export PACKER_CACHE_DIR=~/.packer_cache && cat modules/environment/packer/packer.json \
+	@export PACKER_CACHE_DIR=~/.packer_cache && cd modules/environment/packer && cat packer.json \
 		| jq '.variables.version="${BUILD_VERSION}" \
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.role="host" \
