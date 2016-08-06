@@ -203,7 +203,12 @@ if [[ "$cmd" == "" ]]; then
 fi
 
 COMMAND=(docker run -e CATTLE_AGENT_IP=${self} -e CATTLE_HOST_LABELS=$RANCHER_HOST_LABELS ${cmd#*run})
-${COMMAND[@]}
+CONTAINER=$(${COMMAND[@]})
+if [[ "$CONTAINER" == "" ]]; then
+  echo "Failed to register host $instance_id with $ENVIRONMENT_TYPE environment $ENVIRONMENT_NAME." | slack -p -a 'danger'
+  sleep 30
+  exit 1
+fi
 
 hn=$(hostname)
 name=$(curl -sf -X GET \
