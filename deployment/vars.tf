@@ -1,5 +1,6 @@
 variable "deployment_id" {}
 variable "version" { default = "" }
+variable "use_latest" { default = "" }
 
 variable "region" {}
 variable "ssh_keypair" {}
@@ -24,3 +25,7 @@ variable "server_availability_zones" {}
 variable "staging_default_nodes" {}
 variable "staging_default_availability_zones" {}
 variable "staging_default_instance_type" {}
+
+output "version" {
+  value = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
+}

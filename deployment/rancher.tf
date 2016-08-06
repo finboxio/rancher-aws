@@ -18,7 +18,7 @@ variable "rancher-amis" {
 data "atlas_artifact" "rancher-aws-server" {
   name = "finboxio/rancher-aws-server"
   type = "amazon.image"
-  version = "${var.version}"
+  version = "${replace(var.version, "latest", "")}"
   metadata {
     region = "${var.region}"
   }
@@ -27,7 +27,7 @@ data "atlas_artifact" "rancher-aws-server" {
 data "atlas_artifact" "rancher-aws-host" {
   name = "finboxio/rancher-aws-host"
   type = "amazon.image"
-  version = "${var.version}"
+  version = "${replace(var.version, "latest", "")}"
   metadata {
     region = "${var.region}"
   }
@@ -37,8 +37,7 @@ module "server" {
   source = "../modules/server-asg"
 
   deployment_id = "${var.deployment_id}"
-  # version = "${data.atlas_artifact.rancher-aws-server.metadata_full.version}"
-  version = "latest"
+  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region))}"
 
   region = "${var.region}"
@@ -67,6 +66,9 @@ module "staging" {
 
   name = "Staging"
   deployment_id = "${module.server.deployment_id}"
+  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
+  ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
+
   rancher_hostname = "${module.server.rancher_hostname}"
   cluster_size = "${var.staging_default_nodes}"
   instance_type = "${var.staging_default_instance_type}"
@@ -75,7 +77,4 @@ module "staging" {
   shudder_sqs_url = "${module.server.shudder_sqs_url}"
   s3_bucket = "${module.server.s3_bucket}"
   server_sg = "${module.server.security_group}"
-
-  version = "${data.atlas_artifact.rancher-aws-host.metadata_full.version}"
-  ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
 }
