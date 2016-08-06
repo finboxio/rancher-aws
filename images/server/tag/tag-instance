@@ -3,8 +3,14 @@
 TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID?"TAG_DEPLOYMENT_ID must be set"}
 TAG_DEPLOYMENT_ROLE="server"
 
-id=$(curl -s http://instance-data/latest/meta-data/instance-id)
-region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
+id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+
+while [[ "$id" == "" || "$region" == "" ]]; do
+  sleep 5
+  id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+  region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+done
 
 aws ec2 create-tags \
   --resources $id \

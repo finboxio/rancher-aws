@@ -12,8 +12,14 @@ MYSQL_PORT=${MYSQL_PORT:-3306}
 MYSQL_VOLUME_NAME=${MYSQL_VOLUME_NAME:-mysqlvol}
 MYSQL_VOLUME_SIZE=${MYSQL_VOLUME_SIZE:-12G}
 
-REGION=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
-INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+if [[ "$REGION" == "" || "$INSTANCE_ID" == "" ]]; then
+  echo "Cannot setup mysql volume because instance metadata is not available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
 
 alias convoy="system-docker exec convoy convoy"
 

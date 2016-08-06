@@ -1,6 +1,6 @@
 #!/bin/bash
 
-INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 RANCHER_SCHEME=${RANCHER_SCHEME:?"RANCHER_SCHEME must be set"}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
 ENVIRONMENT_TYPE=${ENVIRONMENT_TYPE:?"ENVIRONMENT_TYPE must be set"}

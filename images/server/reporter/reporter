@@ -4,13 +4,19 @@ CLUSTER_CAPACITY=${CLUSTER_CAPACITY?"CLUSTER_CAPACITY must be set"}
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?"MYSQL_ROOT_PASSWORD must be set"}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME?"RANCHER_HOSTNAME must be set"}
 
-INSTANCE_ID=$(curl -sf http://instance-data/latest/meta-data/instance-id)
+INSTANCE_ID=$(curl -sf http://169.254.169.254/latest/meta-data/instance-id)
 CHECK_INTERVAL=${CHECK_INTERVAL:-10}
 ALERT_COUNT=${ALERT_COUNT:-30}
 FALL_COUNT=${FALL_COUNT:-2}
 RISE_COUNT=${RISE_COUNT:-2}
 MYSQLCHECK_PORT=${MYSQLCHECK_PORT:-2488}
 HAPROXY_MYSQL_PORT=${HAPROXY_MYSQL_PORT:-3307}
+
+if [[ "$INSTANCE_ID" == "" ]]; then
+  echo "Cannot start reporter because instance metadata is not available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
 
 UNHEALTHY_SIZE=$FALL_COUNT
 UNHEALTHY_MYSQL=$FALL_COUNT

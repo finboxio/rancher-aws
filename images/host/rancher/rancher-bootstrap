@@ -31,12 +31,12 @@ if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then
   exit 1
 fi
 
-self=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
-public=$(curl -s http://instance-data/latest/meta-data/public-ipv4)
-instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
-region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
-zone=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .availabilityZone)
-instance_type=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .instanceType)
+self=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+public=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+zone=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .availabilityZone)
+instance_type=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .instanceType)
 tags=$(aws ec2 describe-instances --region $region --instance-ids $instance_id | jq -r '.Reservations[0].Instances[0].Tags | map(.Key + "=" + .Value) | reduce .[] as $tag (""; . + $tag + "&")')
 labels="${tags}instance-type=${instance_type}&zone=${zone}&region=${region}&public-ip=${public}&private-ip=${self}&"
 members=($(serf members -format json \
@@ -47,6 +47,12 @@ members=($(serf members -format json \
     | select(.tags.environment == "'$ENVIRONMENT_TAG'")
     | .addr' \
   | awk -F: '{ print $1 }'))
+
+if [[ "$self" == "" || "$public" == "" || "$instance_id" == "" || "$region" == "" || "$zone" == "" || "$instance_type" == "" ]]; then
+  echo "Cannot bootstrap rancher host because instance metadata is not available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
 
 pong=$(curl -sf --max-time 3 ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/ping)
 if [[ "$pong" != "pong" ]]; then

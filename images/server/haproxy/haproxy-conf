@@ -37,8 +37,14 @@ if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then
   exit 1
 fi
 
-id=$(curl -s http://instance-data/latest/meta-data/instance-id)
-ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+
+if [[ "$id" == "" || "$ip" == "" ]]; then
+	echo "Cannot start haproxy-conf because instance metadata is not available. Exiting in 30s"
+	sleep 30
+	exit 1
+fi
 
 if [[ ! -e /etc/haproxy/haproxy.cfg.tmpl ]]; then
 	cp /usr/local/etc/haproxy/haproxy.cfg.tmpl /etc/haproxy/haproxy.cfg.tmpl

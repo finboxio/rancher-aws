@@ -6,8 +6,14 @@ MYSQL_HOST=${MYSQL_HOST:-localhost}
 MYSQL_VOLUME_NAME=${MYSQL_VOLUME_NAME:-mysqlvol}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
 
-REGION=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
-IP=$(curl -s http://instance-data/latest/meta-data/local-ipv4 | tr '.' '-')
+REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
+IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 | tr '.' '-')
+
+if [[ "$REGION" == "" || "$IP" == "" ]]; then
+  echo "Cannot complete mysql-backup because instance metadata is not available"
+  exit 1
+fi
+
 DESCRIPTION='Rancher mysql database backup'
 VOLUME_ID=$(convoy inspect $MYSQL_VOLUME_NAME | jq -r .DriverInfo.EBSVolumeID)
 

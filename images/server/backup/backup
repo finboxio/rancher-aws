@@ -6,8 +6,8 @@ MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
 ETCD_PORT=${ETCD_PORT:-2379}
 MAX_OLD_SNAPSHOTS=${MIN_OLD_SNAPSHOTS:-3}
 
-my_ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
-region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
+my_ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
 servers=($(serf members -format json \
   | jq -r '.members
     | sort_by(.tags.up)
@@ -16,6 +16,11 @@ servers=($(serf members -format json \
     | select(.tags.role == "server")
     | .addr' \
   | awk -F: '{ print $1 }'))
+
+if [[ "$my_ip" == "" || "$region" == "" ]]; then
+  echo "Rancher backup failed because instance metadata is not available" | slack -p -a 'danger'
+  exit 1
+fi
 
 if [[ "${servers[1]}" == "" ]]; then
   # I will run the backup if i am the only host

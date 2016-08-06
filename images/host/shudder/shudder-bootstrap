@@ -4,9 +4,15 @@ TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
 TERMINATOR_PORT=${TERMINATOR_PORT:-2489}
 cluster_queue_url=${SQS_URL:?"SQS_URL url must be set"}
 
-region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
-my_ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
-my_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+my_ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+my_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+if [[ "$region" == "" || "$my_ip" == "" || "$my_id" == "" ]]; then
+  echo "Cannot start shudder because instance metadata is not available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
 
 cluster_queue_arn=$(aws sqs get-queue-attributes \
   --region $region \
@@ -106,7 +112,7 @@ while true; do
     break
   fi
 
-  terminating=$(curl -sf http://instance-data/latest/meta-data/spot/termination-time)
+  terminating=$(curl -sf http://169.254.169.254/latest/meta-data/spot/termination-time)
   if [[ "$terminating" != "" ]]; then
     echo "Spot instance $my_id is scheduled for termination. Preparing to die." | slack -p -a 'warning'
     break

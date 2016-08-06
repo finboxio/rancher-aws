@@ -1,7 +1,7 @@
 #!/bin/bash
 
-INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
-PUBLIC_IP=$(curl -s http://instance-data/latest/meta-data/public-ipv4)
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 RANCHER_SCHEME=${RANCHER_SCHEME:?"RANCHER_SCHEME must be set"}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
 CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
