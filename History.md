@@ -1,4 +1,12 @@
 
+0.2.0 / 2016-08-05
+==================
+
+  * reorganize source, add docker monitor to kickstart stalled user-docker, integrate aws cloudwatch events for instance termination, improved termination procedure, host and server healthcheck endpoints, run everything as system service
+  * updates for terraform v0.7 (data sources and string concat)
+  * extra attempt to remove rancher host and create a new backup on host termination
+  * add rancher/agent-instance to base image
+
 0.1.3 / 2016-08-01
 ==================
 
