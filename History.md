@@ -1,4 +1,10 @@
 
+0.2.4 / 2016-08-06
+==================
+
+  * only handle cluster-wide termination message if rancher is locally available
+  * clarify slack messages for rancher server vs rancher host
+
 0.2.3 / 2016-08-05
 ==================
 
