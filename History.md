@@ -1,4 +1,9 @@
 
+0.2.1 / 2016-08-05
+==================
+
+  * optimize packer build since we don't need our images in user-docker anymore
+
 0.2.0 / 2016-08-05
 ==================
 
