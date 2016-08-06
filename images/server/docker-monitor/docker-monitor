@@ -1,0 +1,15 @@
+#! /bin/bash
+
+sleep 60
+
+timeout 5s docker ps
+
+if [[ "$?" != "0" ]]; then
+  echo "user-docker is not responding...restarting"
+  system-docker restart docker
+  sleep 60
+  exit 1
+else
+  echo "user-docker is healthy"
+fi
+

@@ -1,0 +1,35 @@
+#! /bin/bash
+
+id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
+ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+
+deployment=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
+environment=${TAG_DEPLOYMENT_ENVIRONMENT}
+group=${TAG_DEPLOYMENT_GROUP}
+
+ips=$(aws ec2 describe-instances \
+  --region $region \
+  --filters "Name=tag:rancher-deployment-id,Values=$deployment" \
+  --filters "Name=tag:rancher-role,Values=server" \
+  | jq -r '.Reservations[].Instances[].PrivateIpAddress | select( . != null )' \
+  | xargs -I{} echo "-retry-join "{})
+
+if [[ "$ips" == "" ]]; then
+  echo "Cannot join serf cluster because no servers are available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
+
+up=$(date +%s%N)
+exec serf agent \
+  -node $id \
+  -retry-interval 10s \
+  -retry-max 30 \
+  -snapshot /etc/serf/snapshot \
+  -tag up=$up \
+  -tag role=host \
+  -tag environment=$environment \
+  -tag group=$group \
+  -rejoin \
+  $ips

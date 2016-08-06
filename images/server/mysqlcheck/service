@@ -1,0 +1,15 @@
+# default: on
+# description: mysqlcheck
+service mysqlcheck
+{
+        flags           = REUSE
+        socket_type     = stream
+        port            = ${MYSQLCHECK_PORT}
+        wait            = no
+        user            = mysql
+        server          = /usr/bin/mysqlcheck
+        log_on_failure  += USERID
+        disable         = no
+        only_from       = 0.0.0.0/0
+        per_source      = UNLIMITED
+}

@@ -1,0 +1,15 @@
+# default: on
+# description: healthcheck
+service healthcheck
+{
+    flags           = REUSE
+    socket_type     = stream
+    port            = ${HEALTHCHECK_PORT}
+    wait            = no
+    user            = root
+    server          = /usr/bin/healthcheck
+    log_on_failure  += USERID
+    disable         = no
+    only_from       = 0.0.0.0/0
+    per_source      = UNLIMITED
+}

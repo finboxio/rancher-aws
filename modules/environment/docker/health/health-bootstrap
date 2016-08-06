@@ -1,8 +1,0 @@
-#! /bin/bash
-HEALTH_PORT=${HEALTH_PORT:-9200}
-
-mkdir -p /etc/xinetd.d || true
-cp /etc/health/service /etc/xinetd.d/health
-sed -i "s/\${HEALTH_PORT}/$HEALTH_PORT/" /etc/xinetd.d/health
-echo "health $HEALTH_PORT/tcp" >> /etc/services
-/usr/sbin/xinetd -dontfork -d

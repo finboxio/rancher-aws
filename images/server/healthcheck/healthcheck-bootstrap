@@ -1,0 +1,7 @@
+#! /bin/bash
+HEALTHCHECK_PORT=${HEALTHCHECK_PORT:-2489}
+
+cp /etc/healthcheck/service /etc/xinetd.d/healthcheck
+sed -i "s/\${HEALTHCHECK_PORT}/$HEALTHCHECK_PORT/" /etc/xinetd.d/healthcheck
+echo "healthcheck $HEALTHCHECK_PORT/tcp" >> /etc/services
+/usr/sbin/xinetd -dontfork

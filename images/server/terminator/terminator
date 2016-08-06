@@ -1,0 +1,60 @@
+#!/bin/bash
+
+my_id=$(curl http://instance-data/latest/meta-data/instance-id)
+
+function success () {
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+function error () {
+  echo -ne "HTTP/1.1 500 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 37\r\n"
+  echo -ne "\r\n"
+  echo -ne "Come with me if you want to live.\r\n"
+  echo -ne "\r\n"
+}
+
+while read line
+do
+  test "$line" = $'\r' && break
+done
+
+if ! mkdir /tmp/dead 2>/dev/null; then
+  error
+  exit
+fi
+
+echo "Rancher server $my_id received a termination signal" | \
+  slack -p -a "warning" &> /dev/null
+
+#
+# Initiate a database snapshot
+#
+
+echo "Initiating mysql snapshot from $my_id" | slack -p -a "warning" &> /dev/null
+result=$(system-docker exec mysql mysql-backup)
+if [[ "$result" != "" ]]; then
+  echo "Server $my_id successfully created snapshot $result" | slack -p -a "good" &> /dev/null
+else
+  echo "Server $my_id failed to create a snapshot" | slack -p -a "danger" &> /dev/null
+fi
+
+#
+# Gracefully stop all services
+#
+
+system-docker stop status &> /dev/null || true
+system-docker exec serf serf leave &> /dev/null || true
+system-docker stop serf &> /dev/null || true
+system-docker stop rancher &> /dev/null || true
+system-docker stop mysql &> /dev/null || true
+
+echo "Server $my_id is ready to die." | slack -p -a "good" &> /dev/null
+
+success

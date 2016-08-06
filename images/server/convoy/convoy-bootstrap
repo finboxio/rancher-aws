@@ -1,0 +1,12 @@
+#! /bin/bash
+
+mount --rbind /host/dev /dev
+
+mkdir -p /host/usr/bin || true
+mkdir -p /host/etc/docker/plugins || true
+rm -f /var/lib/rancher/convoy/convoy.cfg || true
+
+cp /usr/bin/convoy* /host/usr/bin/
+echo "unix:///var/run/convoy/convoy.sock" > /host/etc/docker/plugins/convoy.spec
+
+convoy daemon --drivers ebs

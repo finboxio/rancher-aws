@@ -1,0 +1,94 @@
+#!/bin/bash
+
+INSTANCE_ID=$(curl -s http://instance-data/latest/meta-data/instance-id)
+RANCHER_SCHEME=${RANCHER_SCHEME:?"RANCHER_SCHEME must be set"}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
+ENVIRONMENT_TYPE=${ENVIRONMENT_TYPE:?"ENVIRONMENT_TYPE must be set"}
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+TOKEN_FILE=${TOKEN_FILE:?"TOKEN_FILE must be set"}
+
+function success () {
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 22\r\n"
+  echo -ne "\r\n"
+  echo -ne "Server is healthy.\r\n"
+  echo -ne "\r\n"
+}
+
+function error () {
+  echo -ne "HTTP/1.1 503 Service Unavailable\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 26\r\n"
+  echo -ne "\r\n"
+  echo -ne "Server is NOT healthy!\r\n"
+  echo -ne "\r\n"
+}
+
+while read line
+do
+  test "$line" = $'\r' && break
+done
+
+if [[ ! -e .credentials ]]; then
+  aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
+  if [[ -e ./credentials ]]; then source ./credentials; fi
+fi
+
+if [[ ! -e .token ]]; then
+  aws s3 cp ${TOKEN_FILE} token &> /dev/null || true
+  if [[ -e ./token ]]; then source ./token; fi
+fi
+
+if [[ "$RANCHER_ACCESS_KEY" == "" || "$RANCHER_SECRET_KEY" == "" || "${RANCHER_ENVIRONMENT_ID}" == "" ]]; then
+  error
+  exit
+fi
+
+# Don't report a failure if the rancher server is offline
+# (Otherwise we risk losing all of our hosts if all masters go down)
+pong=$(curl -sf "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/ping")
+
+if [[ "$pong" != "pong" ]]; then
+  success
+  exit
+fi
+
+# Verify that this host is registered
+host=$(curl -sf -X GET \
+  -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+  -H 'Accept: application/json' \
+  "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/projects/${RANCHER_ENVIRONMENT_ID}/hosts?name=${INSTANCE_ID}" \
+  | jq ".data[]")
+
+if [[ "$host" == "" ]]; then
+  error
+  exit
+fi
+
+transitioning=$(echo "$host" | jq -r .transitioning)
+
+# Verify that this host is not in a state transition
+# (i've seen hosts get stuck here before)
+if [[ "$transitioning" != "no" ]]; then
+  error
+  exit
+fi
+
+state=$(echo "$host" | jq -r .state)
+
+# Verify that rancher can reach this host
+if [[ "$state" == "reconnecting" ]]; then
+  error
+  exit
+fi
+
+# Verify that the host has not been removed
+if [[ "$state" == "removed" || "$state" == "purged" ]]; then
+  error
+  exit
+fi
+
+# TODO - Perform environment-specific checks (e.g. verify mesos agent is healthy etc)
+
+success

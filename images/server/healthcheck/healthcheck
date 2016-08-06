@@ -1,0 +1,33 @@
+#!/bin/bash
+
+HAPROXY_WWW_PORT=${HAPROXY_WWW_PORT?"HAPROXY_WWW_PORT must be set"}
+HAPROXY_HEALTHCHECK_PATH=${HAPROXY_HEALTHCHECK_PATH?"HAPROXY_HEALTHCHECK_PATH must be set"}
+
+function success () {
+  echo -ne "HTTP/1.1 200 OK\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 22\r\n"
+  echo -ne "\r\n"
+  echo -ne "Server is healthy.\r\n"
+  echo -ne "\r\n"
+}
+
+function error () {
+  echo -ne "HTTP/1.1 503 Service Unavailable\r\n"
+  echo -ne "Content-Type: text/plain\r\n"
+  echo -ne "Content-Length: 26\r\n"
+  echo -ne "\r\n"
+  echo -ne "Server is NOT healthy!\r\n"
+  echo -ne "\r\n"
+}
+
+while read line
+do
+  test "$line" = $'\r' && break
+done
+
+if curl -sf http://localhost:$HAPROXY_WWW_PORT$HAPROXY_HEALTHCHECK_PATH &> /dev/null; then
+  success
+else
+  error
+fi

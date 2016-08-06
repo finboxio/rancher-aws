@@ -1,0 +1,67 @@
+#! /bin/bash
+
+TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
+
+MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
+ETCD_PORT=${ETCD_PORT:-2379}
+MAX_OLD_SNAPSHOTS=${MIN_OLD_SNAPSHOTS:-3}
+
+my_ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq --raw-output .region)
+servers=($(serf members -format json \
+  | jq -r '.members
+    | sort_by(.tags.up)
+    | .[]
+    | select(.status == "alive")
+    | select(.tags.role == "server")
+    | .addr' \
+  | awk -F: '{ print $1 }'))
+
+if [[ "${servers[1]}" == "" ]]; then
+  # I will run the backup if i am the only host
+  backup_host=${servers[0]}
+else
+  # otherwise select the first sorted non-leader to perform backups
+  backup_host=$(echo "${servers[1]}" | sort | head -n 1)
+fi
+
+if [[ "$backup_host" != "$my_ip" ]]; then
+  exit
+fi
+
+snapshot=$(system-docker exec mysql mysql-backup)
+
+if [[ "$snapshot" != "" ]]; then
+  echo "Successfully backed up rancher to $snapshot" | slack -p -a "good"
+else
+  echo "Rancher backup failed" | slack -p -a "danger"
+fi
+
+# Cleanup old snapshots
+
+snapshots=$(aws ec2 describe-snapshots \
+  --region $region \
+  --filters Name=tag:rancher-cluster-id,Values=${TAG_DEPLOYMENT_ID})
+
+echo "$snapshots" \
+  | jq -r ".Snapshots \
+    | sort_by(.StartTime) \
+    | reverse \
+    | .[$MAX_OLD_SNAPSHOTS:][] \
+    | .SnapshotId" \
+  | xargs -I{} aws ec2 delete-snapshot --region $region --snapshot-id {}
+
+# Warn if our latest backup is stale
+
+BACKUP_MAX_AGE=$(date -d "-1day" +%s)
+stale_backup=$(echo "$snapshots" \
+  | jq -r ".Snapshots \
+    | sort_by(.StartTime) \
+    | reverse \
+    | .[0] \
+    | select((.StartTime | sub(\"[.][0-9][0-9][0-9]Z\"; \"Z\") | fromdate) < $BACKUP_MAX_AGE) \
+    | .SnapshotId")
+
+if [[ "$stale_backup" != "" ]]; then
+  echo "Latest rancher backup is > 1 day old" | slack -p -a "warning"
+fi

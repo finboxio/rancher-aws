@@ -1,7 +1,0 @@
-#! /bin/bash
-MYSQLCHK_PORT=${MYSQLCHK_PORT:-9200}
-
-cp /etc/mysqlchk/service /etc/xinetd.d/mysqlchk
-sed -i "s/\${MYSQLCHK_PORT}/$MYSQLCHK_PORT/" /etc/xinetd.d/mysqlchk
-echo "mysqlchk $MYSQLCHK_PORT/tcp" >> /etc/services
-/usr/sbin/xinetd -dontfork

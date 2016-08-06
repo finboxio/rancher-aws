@@ -1,0 +1,133 @@
+# Default haproxy configuration
+global
+  log 127.0.0.1:32000 local2
+  debug
+  maxconn 4096
+  stats socket /var/run/haproxy.sock mode 777 level admin
+  stats socket ipv4@0.0.0.0:9191 mode 777 level admin
+  stats timeout 60s
+
+defaults
+  option log-health-checks
+  option log-separate-errors
+  option redispatch
+  mode http
+  timeout connect 5000
+  timeout client  50000
+  timeout server  50000
+
+frontend www
+  bind *:{{ .www }}
+  bind *:{{ .proxy }} accept-proxy
+  log 127.0.0.1:32000 local2
+  option httplog
+
+  capture request header Host len 64
+  capture response header Content-Length len 64
+
+  acl xff_exists hdr_cnt(X-Forwarded-For) gt 0
+  acl is_health_check path {{ .health }}
+  acl is_proxy_https dst_port 443
+  acl external {{ if .url -}} hdr_end(host) -i {{ .url }} {{ else -}} always_false {{- end }}
+  acl force_ssl {{ if .ssl -}} always_true {{ else -}} always_false {{- end }}
+  http-request add-header X-Forwarded-For %[src] unless xff_exists
+  http-request set-header X-Forwarded-Port %[dst_port]
+  http-request add-header X-Forwarded-Proto https if is_proxy_https
+  http-request add-header X-Forwarded-Proto http unless is_proxy_https
+  redirect scheme https code 301 if !is_proxy_https !is_health_check external force_ssl
+
+  monitor-uri {{ .health }}
+  acl unhealthy nbsrv(mysql-local) lt 1
+  acl unhealthy nbsrv(rancher-local) lt 1
+  monitor fail if unhealthy
+
+  acl haproxy_path path /haproxy
+  use_backend stats if haproxy_path
+
+  acl rancher_path path /rancher
+  use_backend rancher-local if rancher_path
+
+  acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}
+  use_backend stats if haproxy_url
+
+  acl rancher_url hdr(host) -i {{ .url }}
+  acl rancher_url hdr(host) -i {{ .url }}:443
+  use_backend rancher if rancher_url
+
+frontend galera
+  bind *:{{ .galera }}
+  mode tcp
+  option tcplog
+  log 127.0.0.1:32000 local2
+  default_backend mysql
+
+backend mysql
+  mode tcp
+  timeout server 10800s
+  option httpchk
+  timeout check 2s
+  default-server port {{ .mysqlcheck }} inter 2s downinter 5s rise 3 fall 2 slowstart 60s maxconn 64 maxqueue 128 weight 100
+
+  {{- range $index, $member := .members }}
+  server {{ $member }} {{ $member }}:{{ $.mysql }} check {{ if ne $index 0 -}} backup {{- end }}
+  {{- end }}
+
+backend rancher
+  mode http
+  option httpchk GET /ping
+  http-check expect status 200
+  timeout check 2s
+  default-server inter 3s fall 3 rise 2
+
+  {{- range $index, $member := .members }}
+  server {{ $member }} {{ $member }}:{{ $.rancher }} check {{ if ne $index 0 -}} backup {{- end }}
+  {{- end }}
+
+backend haproxy
+  mode http
+  option httpchk GET {{ .health }}
+  http-check expect status 200
+  timeout check 2s
+  default-server port {{ .www }} inter 3s fall 3 rise 2
+
+  {{- range $index, $member := .members }}
+  server {{ $member }} {{ $member }}:{{ $.stats }} check {{ if ne $index 0 -}} backup {{- end }}
+  {{- end }}
+
+backend mysql-local
+  mode tcp
+  timeout server  10800s
+  option httpchk
+  timeout check 2s
+  default-server port {{ .mysqlcheck }} inter 2s downinter 5s rise 3 fall 2 slowstart 60s maxconn 64 maxqueue 128 weight 100
+  server {{ .ip }} 127.0.0.1:{{ .mysql }} check
+
+backend rancher-local
+  mode http
+  option httpchk GET /ping
+  http-check expect status 200
+  timeout check 2s
+  default-server inter 3s fall 3 rise 2
+  server {{ .ip }} 127.0.0.1:{{ .rancher }} check
+
+backend haproxy-local
+  mode http
+  option httpchk GET {{ .health }}
+  http-check expect status 200
+  timeout check 2s
+  default-server port {{ .www }} inter 3s fall 3 rise 2
+  server {{ .ip }} 127.0.0.1:{{ .stats }} check
+
+listen stats
+  bind 0.0.0.0:{{ .stats }}
+  mode http
+  timeout client 5000
+  timeout connect 4000
+  timeout server 30000
+
+  #This is the virtual URL to access the stats page
+  stats uri /
+
+  #This allows you to take down and bring up back end servers.
+  #This will produce an error on older versions of HAProxy.
+  stats admin if FALSE

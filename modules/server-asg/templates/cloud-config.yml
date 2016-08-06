@@ -1,0 +1,268 @@
+#cloud-config
+write_files:
+  - path: /var/spool/cron/crontabs/rancher
+    permissions: "0600"
+    owner: root
+    group: rancher
+    content: |
+      0 */4 * * * system-docker run --rm --net host \
+        -v /var/run/system-docker.sock:/var/run/system-docker.sock \
+        -v /usr/bin/system-docker:/usr/bin/system-docker \
+        -e TAG_DEPLOYMENT_ID=${deployment_id} \
+        -e SLACK_WEBHOOK_URL=${slack_webhook} \
+        -e SLACK_USERNAME=Rancher \
+        -e SLACK_ICON=cow \
+        --entrypoint backup finboxio/rancher-aws-server:${version}
+  - path: /etc/rc.local
+    permissions: "0755"
+    owner: root
+    content: |
+      #!/bin/bash
+      # Start the cron service for backups
+      crond
+  - path: /etc/profile.d/alias.sh
+    permissions: "0755"
+    owner: root
+    content: |
+      alias convoy="sudo system-docker exec -it convoy convoy"
+      alias mysql="sudo system-docker exec -it mysql mysql"
+      alias backup="sudo system-docker exec -it mysql mysql-backup"
+      alias serf="sudo system-docker exec -it serf serf"
+      alias curl="sudo system-docker exec -it serf curl"
+      alias rocker="sudo system-docker"
+      alias update="sudo system-docker pull finboxio/rancher-aws-host:${version}"
+rancher:
+  environment:
+    TAG_DEPLOYMENT_ID: ${deployment_id}
+    CLUSTER_CAPACITY: ${cluster_size}
+    S3_BUCKET: ${rancher_s3_bucket}
+    CREDENTIALS_FILE: s3://${rancher_s3_bucket}/credentials
+    SQS_URL: ${shudder_sqs_url}
+    SLACK_WEBHOOK_URL: ${slack_webhook}
+    SLACK_USERNAME: Rancher
+    SLACK_ICON: cow
+    MYSQL_ROOT_PASSWORD: ${mysql_root_password}
+    MYSQL_HOST: localhost
+    MYSQL_PORT: 3306
+    MYSQL_SOCKET: /var/run/mysqld/mysqld.sock
+    MYSQL_DATA_DIR: /etc/mysql/data
+    MYSQL_VOLUME_NAME: mysqlvol
+    MYSQL_VOLUME_SIZE: ${mysql_volume_size}
+    MYSQL_IMAGE: finboxio/rancher-aws-server:${version}
+    RANCHER_ADMIN_USER: ${rancher_admin_user}
+    RANCHER_ADMIN_PASSWORD: ${rancher_admin_password}
+    RANCHER_MYSQL_USER: ${rancher_mysql_user}
+    RANCHER_MYSQL_PASSWORD: ${rancher_mysql_password}
+    RANCHER_MYSQL_DATABASE: ${rancher_mysql_database}
+    RANCHER_HOSTNAME: ${rancher_hostname}
+    RANCHER_SCHEME: https
+    RANCHER_VERSION: v1.1.2
+    MYSQLCHECK_PORT: 2488
+    TERMINATOR_PORT: 2489
+    HEALTHCHECK_PORT: 2490
+    HAPROXY_WWW_PORT: 80
+    HAPROXY_WWW_PROXY: 81
+    HAPROXY_MYSQL_PORT: 3307
+    HAPROXY_HTTPS_REDIRECT: true
+    HAPROXY_HEALTHCHECK_PATH: /health
+  services:
+    docker-monitor:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "docker-monitor" ]
+      restart: on-failure
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=docker
+        - io.rancher.os.detach=false
+      volumes:
+        - /var/run:/var/run
+        - /usr/bin/docker:/usr/bin/docker
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    convoy:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "convoy-bootstrap" ]
+      restart: always
+      net: host
+      pid: host
+      privileged: true
+      labels:
+        - io.rancher.os.scope=system
+      volumes:
+        - /dev:/host/dev
+        - /usr/bin:/host/usr/bin
+        - /etc/docker:/host/etc/docker
+        - /var/run/convoy:/var/run/convoy
+        - /var/lib/rancher/convoy:/var/lib/rancher/convoy:shared
+    tag:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "tag-instance" ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+      environment:
+        - TAG_*
+    serf:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "serf-bootstrap" ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=tag
+      environment:
+        - TAG_*
+      volumes:
+        - /etc/serf:/etc/serf
+    haproxy-log:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "rsyslogd" ]
+      command: [ "-n" ]
+      restart: always
+      net: host
+      privileged: true
+      labels:
+        - io.rancher.os.scope=system
+      volumes:
+        - /var/log:/var/log
+    haproxy-conf:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "haproxy-conf" ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=serf
+      environment:
+        - SLACK_*
+        - HAPROXY_*
+        - MYSQL_PORT
+        - MYSQLCHECK_PORT
+        - RANCHER_HOSTNAME
+      volumes:
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+        - /etc/haproxy:/etc/haproxy
+    haproxy:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "haproxy-bootstrap" ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=haproxy-conf,haproxy-log
+      volumes:
+        - /etc/haproxy:/etc/haproxy
+    mysql-volume:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'mysql-volume' ]
+      restart: on-failure
+      net: host
+      privileged: true
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=convoy,haproxy
+      environment:
+        - MYSQL_*
+        - RANCHER_*
+      volumes:
+        - /var/run:/var/run
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    mysqlcheck:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'mysqlcheck-bootstrap' ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=mysql
+      environment:
+        - MYSQL_*
+        - MYSQLCHK_*
+      volumes:
+        - /var/run:/var/run
+    mysql-monitor:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'mysql-monitor' ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=mysqlvol
+      environment:
+        - MYSQL_*
+      volumes:
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    shudder:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'shudder-bootstrap' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+      environment:
+        - SLACK_*
+        - SQS_URL
+        - TERMINATOR_PORT
+        - TAG_DEPLOYMENT_ID
+        - CREDENTIALS_FILE
+      volumes:
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    terminator:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'terminator-bootstrap' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+      environment:
+        - SLACK_*
+        - TERMINATOR_PORT
+      volumes:
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    reporter:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ "reporter" ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+      environment:
+        - SLACK_*
+        - CLUSTER_CAPACITY
+        - MYSQL_ROOT_PASSWORD
+        - RANCHER_HOSTNAME
+        - HAPROXY_MYSQL_PORT
+        - MYSQLCHECK_PORT
+    rancher-server:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'rancher-bootstrap' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=mysqlvol,docker-monitor
+      environment:
+        - S3_BUCKET
+        - CREDENTIALS_FILE
+        - HAPROXY_MYSQL_PORT
+        - RANCHER_*
+      volumes:
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /usr/bin/docker:/usr/bin/docker
+        - /var/lib/rancher/etc:/var/lib/rancher/etc
+    healthcheck:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'healthcheck-bootstrap' ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+      environment:
+        - HEALTHCHECK_PORT
+        - HAPROXY_*

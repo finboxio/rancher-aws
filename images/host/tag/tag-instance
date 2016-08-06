@@ -1,0 +1,18 @@
+#! /bin/bash
+
+TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID?"TAG_DEPLOYMENT_ID must be set"}
+TAG_DEPLOYMENT_ENVIRONMENT=${TAG_DEPLOYMENT_ENVIRONMENT?"TAG_DEPLOYMENT_ENVIRONMENT must be set"}
+TAG_DEPLOYMENT_GROUP=${TAG_DEPLOYMENT_GROUP?"TAG_DEPLOYMENT_GROUP must be set"}
+TAG_DEPLOYMENT_ROLE="host"
+
+id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
+
+aws ec2 create-tags \
+  --resources $id \
+  --region $region \
+  --tags Key=rancher-deployment-id,Value=$TAG_DEPLOYMENT_ID \
+         Key=rancher-environment,Value=$TAG_DEPLOYMENT_ENVIRONMENT \
+         Key=rancher-group,Value=$TAG_DEPLOYMENT_GROUP \
+         Key=rancher-role,Value=$TAG_DEPLOYMENT_ROLE \
+         Key=Name,Value=rancher-$TAG_DEPLOYMENT_ID-$TAG_DEPLOYMENT_ENVIRONMENT-$TAG_DEPLOYMENT_GROUP

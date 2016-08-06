@@ -1,0 +1,233 @@
+#! /bin/bash
+
+CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
+TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
+TERMINATOR_PORT=${TERMINATOR_PORT:-2489}
+cluster_queue_url=${SQS_URL:?"SQS_URL must be set"}
+
+region=$(curl -s http://instance-data/latest/dynamic/instance-identity/document | jq -r .region)
+my_ip=$(curl -s http://instance-data/latest/meta-data/local-ipv4)
+my_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+
+cluster_queue_arn=$(aws sqs get-queue-attributes \
+  --region $region \
+  --queue-url $cluster_queue_url \
+  --attribute-names QueueArn \
+  | jq -r .Attributes.QueueArn)
+
+# Create SQS queue for instance state changes
+instance_queue_name=rancher-$TAG_DEPLOYMENT_ID-shudder-queue-$my_id
+
+instance_queue_url=$(aws sqs list-queues \
+  --region $region \
+  --queue-name-prefix $instance_queue_name \
+  | jq -r .QueueUrls[0])
+
+if [[ "$instance_queue_url" == "" ]]; then
+  instance_queue_url=$(aws sqs create-queue \
+    --region $region \
+    --queue-name $instance_queue_name \
+    | jq -r .QueueUrl)
+fi
+
+instance_queue_arn=$(aws sqs get-queue-attributes \
+  --region $region \
+  --queue-url $instance_queue_url \
+  --attribute-names QueueArn \
+  | jq -r .Attributes.QueueArn)
+
+# Create cloudwatch rule for state changes
+rule_name=rancher-$TAG_DEPLOYMENT_ID-shudder-rule-$my_id
+rule_arn=$(aws events describe-rule \
+  --region $region \
+  --name $rule_name \
+  | jq -r .Arn)
+
+if [[ "$rule_arn" == "" ]]; then
+  rule_pattern='"{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Instance State-change Notification\"],\"detail\":{\"state\":[\"shutting-down\",\"stopped\",\"stopping\",\"terminated\"],\"instance-id\":[\"'$my_id'\"]}}"'
+  cmd="aws events put-rule \
+    --region $region \
+    --name $rule_name \
+    --event-pattern $rule_pattern \
+    --description \"State change events for rancher instance $my_id\""
+  rule_arn=$(eval $cmd | jq -r .RuleArn)
+fi
+
+# Grant permission for cloudwatch to send to instance SQS
+policy='"{\"Version\":\"2008-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"*\"},\"Action\":\"sqs:SendMessage\",\"Resource\":\"'$instance_queue_arn'\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"'$rule_arn'\"}}}]}"'
+cmd="aws sqs set-queue-attributes \
+  --region $region \
+  --queue-url $instance_queue_url \
+  --attributes 'Policy=$policy'"
+eval $cmd
+
+# Add instance-queue target to rule
+target_name=rancher-$TAG_DEPLOYMENT_ID-shudder-$my_id-instance-target
+aws events put-targets \
+  --region $region \
+  --rule $rule_name \
+  --targets Id=$target_name,Arn=$instance_queue_arn
+
+# Add cluster-queue target to rule
+target_name=rancher-$TAG_DEPLOYMENT_ID-shudder-$my_id-cluster-target
+aws events put-targets \
+  --region $region \
+  --rule $rule_name \
+  --targets Id=$target_name,Arn=$cluster_queue_arn
+
+while true; do
+  sleep 3
+
+  event=$(aws sqs receive-message \
+    --region $region \
+    --queue-url $instance_queue_url \
+    | jq -r .Messages[])
+
+  if [[ "$event" != "" ]]; then
+    body=$(echo "$event" \
+      | jq -r .Body \
+      | sed 's/\\n/\n/' \
+      | tr -d '\\' \
+      | sed 's/"{/{/g' \
+      | sed 's/}"/}/g' \
+      | jq .)
+
+    message_id=$(echo "$event" | jq -r .MessageId)
+    receipt_handle=$(echo "$event" | jq -r .ReceiptHandle)
+    state=$(echo "$body" | jq -r .detail.state)
+
+    echo "Rancher server $my_id is $state. Preparing to die." | slack -p -a "warning" &> /dev/null
+
+    # Remove the message from the queue
+    aws sqs delete-message \
+      --region $region \
+      --queue-url $instance_queue_url \
+      --receipt-handle $receipt_handle
+
+    break
+  fi
+
+  terminating=$(curl -sf http://instance-data/latest/meta-data/spot/termination-time)
+  if [[ "$terminating" != "" ]]; then
+    echo "Spot instance $my_id is scheduled for termination. Preparing to die." | slack -p -a 'warning'
+    break
+  fi
+
+  event=$(aws sqs receive-message \
+    --region $region \
+    --queue-url $cluster_queue_url \
+    | jq -r .Messages[])
+
+  if [[ "$event" != "" ]]; then
+    body=$(echo "$event" \
+      | jq -r .Body \
+      | sed 's/\\n/\n/' \
+      | tr -d '\\' \
+      | sed 's/"{/{/g' \
+      | sed 's/}"/}/g' \
+      | jq .)
+
+    message_id=$(echo "$event" | jq -r .MessageId)
+    receipt_handle=$(echo "$event" | jq -r .ReceiptHandle)
+    state=$(echo "$body" | jq -r .detail.state)
+    terminating_id=$(echo "$body" | jq -r '.detail["instance-id"]')
+
+    aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
+    if [[ -e ./credentials ]]; then source ./credentials; fi
+
+    if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" ]]; then
+      host_id=$(curl -sf -X GET \
+        -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+        -H 'Accept: application/json' \
+        "http://localhost:8080/v1/hosts?name=${terminating_id}" \
+        | jq -r ".data[] | .id")
+
+      if [[ "$host_id" != "" ]]; then
+        echo "Decommissioning rancher host $terminating_id ($host_id)..." | \
+          slack -p -a "warning" &> /dev/null
+
+        state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:8080/v1/hosts/${host_id}/?action=deactivate | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "inactive" ]]; do
+          state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+            http://localhost:8080/v1/hosts/$host_id | jq -r .state)
+          sleep 1
+        done
+
+        state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:8080/v1/hosts/$host_id/?action=remove | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "removed" ]]; do
+          state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+            http://localhost:8080/v1/hosts/$host_id | jq -r .state)
+        done
+
+        state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+          -X POST \
+          -H 'Accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{}' \
+          http://localhost:8080/v1/hosts/$host_id/?action=purge | jq -r .state)
+
+        while [[ "$state" != "" && "$state" != "purged" ]]; do
+          state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
+            http://localhost:8080/v1/hosts/$host_id | jq -r .state)
+        done
+
+        echo "Successfully decommissioned rancher host $terminating_id ($host_id)" | \
+          slack -p -a "good" &> /dev/null
+
+        # Update the last backup
+        echo "Initiating mysql snapshot from $my_id" | slack -p -a "warning" &> /dev/null
+        result=$(system-docker exec mysql mysql-backup)
+        if [[ "$result" != "" ]]; then
+          echo "Host $my_id successfully created snapshot $result" | slack -p -a "good" &> /dev/null
+        else
+          echo "Host $my_id failed to create a snapshot" | slack -p -a "danger" &> /dev/null
+        fi
+      fi
+
+      if [[ "$state" == "terminated" ]]; then
+        # Delete the instance queue and cloudwatch rules
+        rule_name=rancher-$TAG_DEPLOYMENT_ID-shudder-rule-$terminating_id
+        terminating_queue_name=rancher-$TAG_DEPLOYMENT_ID-shudder-queue-$terminating_id
+        terminating_queue_url=$(aws sqs list-queues \
+          --region $region \
+          --queue-name-prefix $terminating_queue_name \
+          | jq -r .QueueUrls[0])
+
+        aws sqs delete-queue \
+          --region $region \
+          --queue-url $terminating_queue_url
+
+        aws events list-targets-by-rule \
+          --region $region \
+          --rule $rule_name \
+          | jq -r '.Targets[].Id' \
+          | xargs -I{} aws events remove-targets --region $region --rule $rule_name --ids {}
+
+        aws events delete-rule \
+          --region $region \
+          --name $rule_name
+
+        echo "Cleaned up all traces of host $terminating_id" | slack -p -a "good" &> /dev/null
+      fi
+
+      aws sqs delete-message \
+        --region $region \
+        --queue-url $cluster_queue_url \
+        --receipt-handle $receipt_handle
+    fi
+  fi
+done
+
+curl -sf http://localhost:$TERMINATOR_PORT
