@@ -140,8 +140,10 @@ while true; do
 
     aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
     if [[ -e ./credentials ]]; then source ./credentials; fi
+    pong=$(curl -sf http://localhost:8080/ping)
 
-    if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" ]]; then
+    # Only handle message if rancher server is available
+    if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" && "$pong" == "pong" ]]; then
       host_id=$(curl -sf -X GET \
         -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
         -H 'Accept: application/json' \
