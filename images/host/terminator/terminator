@@ -35,7 +35,7 @@ if ! mkdir /tmp/dead 2>/dev/null; then
   exit
 fi
 
-echo "Rancher server $INSTANCE_ID received a termination signal" | \
+echo "Rancher host $INSTANCE_ID received a termination signal" | \
   slack -p -a "warning" &> /dev/null
 
 aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true

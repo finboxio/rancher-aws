@@ -101,7 +101,7 @@ while true; do
     receipt_handle=$(echo "$event" | jq -r .ReceiptHandle)
     state=$(echo "$body" | jq -r .detail.state)
 
-    echo "Rancher server $my_id is $state. Preparing to die." | slack -p -a "warning" &> /dev/null
+    echo "Rancher host $my_id is $state. Preparing to die." | slack -p -a "warning" &> /dev/null
 
     # Remove the message from the queue
     aws sqs delete-message \
