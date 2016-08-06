@@ -64,7 +64,6 @@
       "inline": [
         "docker pull rancher/agent:v1.0.2",
         "docker pull rancher/agent-instance:v0.8.3",
-        "docker pull {{ user `dockerhub` }}/rancher-aws-host:{{ user `version` }}",
         "system-docker pull {{ user `dockerhub` }}/rancher-aws-host:{{ user `version` }}"
       ]
     }

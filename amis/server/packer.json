@@ -63,7 +63,6 @@
       "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
       "inline": [
         "docker pull rancher/server:v1.1.2",
-        "docker pull {{ user `dockerhub` }}/rancher-aws-server:{{ user `version` }}",
         "system-docker pull {{ user `dockerhub` }}/rancher-aws-server:{{ user `version` }}"
       ]
     }

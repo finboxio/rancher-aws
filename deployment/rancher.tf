@@ -37,7 +37,7 @@ module "server" {
   source = "../modules/server-asg"
 
   deployment_id = "${var.deployment_id}"
-  version = "${data.atlas_artifact.rancher-aws-server.metadata_full.version}-latest"
+  version = "${data.atlas_artifact.rancher-aws-server.metadata_full.version}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region))}"
 
   region = "${var.region}"
@@ -75,6 +75,6 @@ module "staging" {
   s3_bucket = "${module.server.s3_bucket}"
   server_sg = "${module.server.security_group}"
 
-  version = "${data.atlas_artifact.rancher-aws-host.metadata_full.version}-latest"
+  version = "${data.atlas_artifact.rancher-aws-host.metadata_full.version}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
 }
