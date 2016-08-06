@@ -1,4 +1,12 @@
 
+0.2.3 / 2016-08-05
+==================
+
+  * enable configurable use of latest version in cloud config
+  * wait until console is ready before starting custom services
+  * check for failure to start rancher agent during host bootstrapping
+  * handle unavailability of instance metadata
+
 0.2.2 / 2016-08-05
 ==================
 
