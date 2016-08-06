@@ -32,7 +32,7 @@ rancher:
       restart: on-failure
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=docker
+        - io.rancher.os.after=docker,console
         - io.rancher.os.detach=false
       volumes:
         - /var/run:/var/run
@@ -45,6 +45,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
         - io.rancher.os.detach=false
       environment:
         - TAG_*
@@ -55,7 +56,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=tag
+        - io.rancher.os.after=tag,console
       environment:
         - TAG_*
       volumes:
@@ -67,6 +68,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - SQS_URL
@@ -80,6 +82,7 @@ rancher:
       tty: true
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - RANCHER_*
@@ -97,6 +100,7 @@ rancher:
       tty: true
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - RANCHER_*
@@ -111,7 +115,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=tag
+        - io.rancher.os.after=tag,console
       environment:
         - TAG_*
         - SLACK_*

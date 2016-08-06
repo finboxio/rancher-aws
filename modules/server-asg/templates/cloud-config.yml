@@ -87,6 +87,7 @@ rancher:
       privileged: true
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       volumes:
         - /dev:/host/dev
         - /usr/bin:/host/usr/bin
@@ -100,6 +101,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - TAG_*
     serf:
@@ -109,7 +111,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=tag
+        - io.rancher.os.after=tag,console
       environment:
         - TAG_*
       volumes:
@@ -123,6 +125,7 @@ rancher:
       privileged: true
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       volumes:
         - /var/log:/var/log
     haproxy-conf:
@@ -132,7 +135,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=serf
+        - io.rancher.os.after=serf,console
       environment:
         - SLACK_*
         - HAPROXY_*
@@ -150,7 +153,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=haproxy-conf,haproxy-log
+        - io.rancher.os.after=haproxy-conf,haproxy-log,console
       volumes:
         - /etc/haproxy:/etc/haproxy
     mysql-volume:
@@ -161,7 +164,7 @@ rancher:
       privileged: true
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=convoy,haproxy
+        - io.rancher.os.after=convoy,haproxy,console
       environment:
         - MYSQL_*
         - RANCHER_*
@@ -175,7 +178,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=mysql
+        - io.rancher.os.after=mysql,console
       environment:
         - MYSQL_*
         - MYSQLCHK_*
@@ -188,7 +191,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=mysqlvol
+        - io.rancher.os.after=mysqlvol,console
       environment:
         - MYSQL_*
       volumes:
@@ -201,6 +204,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - SQS_URL
@@ -217,6 +221,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - TERMINATOR_PORT
@@ -230,6 +235,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - SLACK_*
         - CLUSTER_CAPACITY
@@ -244,7 +250,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
-        - io.rancher.os.after=mysqlvol,docker-monitor
+        - io.rancher.os.after=mysqlvol,docker-monitor,console
       environment:
         - S3_BUCKET
         - CREDENTIALS_FILE
@@ -263,6 +269,7 @@ rancher:
       net: host
       labels:
         - io.rancher.os.scope=system
+        - io.rancher.os.after=console
       environment:
         - HEALTHCHECK_PORT
         - HAPROXY_*
