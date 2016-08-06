@@ -110,9 +110,7 @@ else
     slack -p -a "danger" &> /dev/null
 fi
 
-docker stop health &> /dev/null || true
-
-docker exec serf serf leave &> /dev/null || true
-docker stop serf &> /dev/null || true
+system-docker exec serf serf leave &> /dev/null || true
+system-docker stop serf &> /dev/null || true
 
 success

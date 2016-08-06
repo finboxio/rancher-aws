@@ -87,8 +87,8 @@ rancher:
         - TOKEN_FILE
         - TERMINATOR_PORT
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - /usr/bin/docker:/usr/bin/docker
+        - /var/run:/var/run
+        - /usr/bin/system-docker:/usr/bin/system-docker
     healthcheck:
       image: finboxio/rancher-aws-host:${version}
       entrypoint: [ 'healthcheck-bootstrap' ]
