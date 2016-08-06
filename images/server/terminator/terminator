@@ -49,7 +49,7 @@ fi
 # Gracefully stop all services
 #
 
-system-docker stop status &> /dev/null || true
+system-docker stop reporter &> /dev/null || true
 system-docker exec serf serf leave &> /dev/null || true
 system-docker stop serf &> /dev/null || true
 system-docker stop rancher &> /dev/null || true
