@@ -37,7 +37,8 @@ module "server" {
   source = "../modules/server-asg"
 
   deployment_id = "${var.deployment_id}"
-  version = "${data.atlas_artifact.rancher-aws-server.metadata_full.version}"
+  # version = "${data.atlas_artifact.rancher-aws-server.metadata_full.version}"
+  version = "latest"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region))}"
 
   region = "${var.region}"
