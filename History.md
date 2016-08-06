@@ -1,4 +1,12 @@
 
+0.2.2 / 2016-08-05
+==================
+
+  * fix graceful serf exit on host termination
+  * use latest docker image
+  * handle case where instance metadata is not available to serf
+  * stop reporter on instance termination
+
 0.2.1 / 2016-08-05
 ==================
 
