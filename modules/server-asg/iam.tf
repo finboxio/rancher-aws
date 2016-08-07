@@ -22,8 +22,9 @@ data "template_file" "rancher-ec2-policy-data" {
   template = "${file(format("%s/%s", path.module, "templates/ec2-policy.json"))}"
 
   vars {
-    name          = "rancher"
-    s3_bucket     = "${aws_s3_bucket.rancher-bucket.bucket}"
+    name = "rancher"
+    config_bucket = "${aws_s3_bucket.rancher-bucket.bucket}"
+    status_bucket = "${aws_s3_bucket.rancher-status-bucket.bucket}"
   }
 }
 

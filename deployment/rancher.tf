@@ -44,6 +44,7 @@ module "server" {
   ssh_keypair = "${var.ssh_keypair}"
   zone_id = "${var.zone_id}"
   certificate_id = "${var.certificate_id}"
+  cloudfront_certificate_id = "${var.cloudfront_certificate_id}"
 
   cluster_size = "${var.server_nodes}"
   instance_type = "${var.server_instance_type}"
@@ -59,6 +60,10 @@ module "server" {
   rancher_admin_user = "${var.rancher_admin_user}"
   rancher_admin_password = "${var.rancher_admin_password}"
   slack_webhook = "${var.slack_webhook}"
+}
+
+output "status_endpoint" {
+  value = "${module.server.status_endpoint}"
 }
 
 module "staging" {

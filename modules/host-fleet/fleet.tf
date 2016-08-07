@@ -2,7 +2,7 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   iam_fleet_role = "${aws_iam_role.rancher-fleet-iam-role.arn}"
 
   spot_price = 0.10
-  target_capacity = 0
+  target_capacity = 1
   allocation_strategy = "lowestPrice"
   valid_until = "2020-01-01T00:00:00Z"
   terminate_instances_with_expiration = true

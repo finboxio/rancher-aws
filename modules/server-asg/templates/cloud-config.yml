@@ -13,6 +13,13 @@ write_files:
         -e SLACK_USERNAME=Rancher \
         -e SLACK_ICON=cow \
         --entrypoint backup finboxio/rancher-aws-server:${version}
+      1-59/10 * * * * system-docker run --rm --net host \
+        -e TAG_DEPLOYMENT_ID=${deployment_id} \
+        -e STATUS_BUCKET=${rancher_status_bucket} \
+        -e SLACK_WEBHOOK_URL=${slack_webhook} \
+        -e SLACK_USERNAME=Rancher \
+        -e SLACK_ICON=cow \
+        --entrypoint clustercheck finboxio/rancher-aws-server:${version}
   - path: /etc/rc.local
     permissions: "0755"
     owner: root
@@ -36,6 +43,7 @@ rancher:
     TAG_DEPLOYMENT_ID: ${deployment_id}
     CLUSTER_CAPACITY: ${cluster_size}
     S3_BUCKET: ${rancher_s3_bucket}
+    STATUS_BUCKET: ${rancher_status_bucket}
     CREDENTIALS_FILE: s3://${rancher_s3_bucket}/credentials
     SQS_URL: ${shudder_sqs_url}
     SLACK_WEBHOOK_URL: ${slack_webhook}

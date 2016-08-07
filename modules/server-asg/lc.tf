@@ -12,6 +12,7 @@ data "template_file" "rancher-userdata-template" {
     rancher_admin_password = "${var.rancher_admin_password}"
     rancher_hostname       = "${var.rancher_hostname}"
     rancher_s3_bucket      = "${aws_s3_bucket.rancher-bucket.bucket}"
+    rancher_status_bucket  = "${aws_s3_bucket.rancher-status-bucket.bucket}"
     slack_webhook          = "${var.slack_webhook}"
     shudder_sqs_url        = "${aws_sqs_queue.rancher-terminations.id}"
     cluster_size           = "${var.cluster_size}"

@@ -17,3 +17,7 @@ output "rancher_hostname" {
 output "deployment_id" {
   value = "${var.deployment_id}"
 }
+
+output "status_endpoint" {
+  value = "${aws_s3_bucket.rancher-status-bucket.website_endpoint}"
+}

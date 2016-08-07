@@ -9,6 +9,7 @@ variable "cluster_size" { default = 2 }
 variable "ssh_keypair" {}
 variable "zone_id" {}
 variable "certificate_id" {}
+variable "cloudfront_certificate_id" {}
 
 variable "ami" {}
 variable "version" {}

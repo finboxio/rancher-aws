@@ -67,7 +67,7 @@ RUN curl -L https://github.com/rancher/convoy/releases/download/v${CONVOY_VERSIO
     && cp convoy/convoy convoy/convoy-pdata_tools /usr/bin/ \
     && rm -rf convoy.tar.gz convoy
 
-# gotpl installation
+# gotpl && checkup installation
 ENV GO_VERSION 1.6.3
 RUN set -x \
     && curl -SL "https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz" -o go.tar.gz \
@@ -76,6 +76,11 @@ RUN set -x \
     && export GOPATH=/usr/src/go \
     && /usr/local/go/bin/go get github.com/tsg/gotpl \
     && mv /usr/src/go/bin/gotpl /usr/bin/gotpl \
+    && /usr/local/go/bin/go get github.com/finboxio/checkup \
+    && /usr/local/go/bin/go get github.com/spf13/cobra \
+    && cd $GOPATH/src/github.com/finboxio/checkup \
+    && /usr/local/go/bin/go build -o checkup cmd/checkup/main.go \
+    && mv checkup /usr/bin/checkup \
     && rm -rf go.tar.gz /usr/local/go /usr/src/go
 
 # rsyslog installation
@@ -117,4 +122,5 @@ RUN cp /var/lib/aws/slack/slack /usr/bin/slack \
     && mkdir -p /etc/healthcheck \
     && cp /var/lib/aws/healthcheck/healthcheck /usr/bin/healthcheck \
     && cp /var/lib/aws/healthcheck/healthcheck-bootstrap /usr/bin/healthcheck-bootstrap \
-    && cp /var/lib/aws/healthcheck/service /etc/healthcheck/service
+    && cp /var/lib/aws/healthcheck/service /etc/healthcheck/service \
+    && cp /var/lib/aws/clustercheck/clustercheck /usr/bin/clustercheck

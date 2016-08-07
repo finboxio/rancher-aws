@@ -1,3 +1,3 @@
 # module "mongo" {
-#   source = "../../../modules/mongo-standalone"
+#   source = "../../../modules/host-fleet"
 # }

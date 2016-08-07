@@ -6,6 +6,7 @@ variable "region" {}
 variable "ssh_keypair" {}
 variable "zone_id" {}
 variable "certificate_id" {}
+variable "cloudfront_certificate_id" {}
 
 variable "rancher_hostname" {}
 variable "mysql_root_password" {}
@@ -25,7 +26,3 @@ variable "server_availability_zones" {}
 variable "staging_default_nodes" {}
 variable "staging_default_availability_zones" {}
 variable "staging_default_instance_type" {}
-
-output "version" {
-  value = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
-}
