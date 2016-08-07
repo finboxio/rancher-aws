@@ -1,4 +1,10 @@
 
+0.3.0 / 2016-08-06
+==================
+
+  * add cluster status checks and s3 + cloudfront hosted web app
+  * add cluster status checks and s3 + cloudfront hosted web app
+
 0.2.4 / 2016-08-06
 ==================
 
