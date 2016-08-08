@@ -61,11 +61,15 @@ while true; do
 
   # Remove checks from instances that are no longer in service
   nodes=$(echo $instances | jq -r .InstanceId | sort | uniq)
-  checked=$(echo $all | jq -r '.[].title | split(".") | .[-1]' | sort | uniq)
+  checkers=$(ls all-*.json | sed -E 's/all-(.*).json/\1/')
+  checked=$(echo $all | jq -r '.[].title | split(".") | .[-1]')
+  checked=$(echo "$checked
+    $checkers" | sort | uniq)
   remove=$(comm -23 <(echo "$checked") <(echo "$nodes"))
   for node in $remove; do
-    echo "Removing health checks regarding node $remove from checker $id"
+    echo "Removing health checks regarding node $node from checker $id"
     aws s3 rm s3://$bucket/$prefix/all-$node.json
+    rm all-$node.json
     all=$(echo "$all" | jq -r ".[] | select(.title | contains(\"$node\") | not)" | jq -s .)
   done
 
