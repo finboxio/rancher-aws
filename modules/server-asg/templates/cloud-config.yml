@@ -13,19 +13,12 @@ write_files:
         -e SLACK_USERNAME=Rancher \
         -e SLACK_ICON=cow \
         --entrypoint backup finboxio/rancher-aws-server:${version}
-      1-59/10 * * * * sudo system-docker run --rm --net host \
-        -e TAG_DEPLOYMENT_ID=${deployment_id} \
-        -e STATUS_BUCKET=${rancher_status_bucket} \
-        -e SLACK_WEBHOOK_URL=${slack_webhook} \
-        -e SLACK_USERNAME=Rancher \
-        -e SLACK_ICON=cow \
-        --entrypoint clustercheck finboxio/rancher-aws-server:${version}
   - path: /etc/rc.local
     permissions: "0755"
     owner: root
     content: |
       #!/bin/bash
-      # Start the cron service for backups and health checks
+      # Start the cron service for backups
       crond
   - path: /etc/profile.d/alias.sh
     permissions: "0755"
@@ -281,3 +274,15 @@ rancher:
       environment:
         - HEALTHCHECK_PORT
         - HAPROXY_*
+    clustercheck:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'clustercheck' ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - TAG_*
+        - STATUS_BUCKET
+        - SLACK_*
