@@ -33,6 +33,7 @@ write_files:
       alias update="sudo system-docker pull finboxio/rancher-aws-host:${version}"
 rancher:
   environment:
+    ELB_NAME: ${elb_name}
     TAG_DEPLOYMENT_ID: ${deployment_id}
     CLUSTER_CAPACITY: ${cluster_size}
     S3_BUCKET: ${rancher_s3_bucket}
@@ -105,6 +106,7 @@ rancher:
         - io.rancher.os.after=console
       environment:
         - TAG_*
+        - ELB_NAME
     serf:
       image: finboxio/rancher-aws-server:${version}
       entrypoint: [ "serf-bootstrap" ]

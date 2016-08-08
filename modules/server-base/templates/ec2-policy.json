@@ -17,7 +17,8 @@
         "ec2:*",
         "sqs:*",
         "events:*",
-        "sns:*"
+        "sns:*",
+        "elb:*"
       ],
       "Effect": "Allow",
       "Resource": "*"

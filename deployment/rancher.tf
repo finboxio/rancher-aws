@@ -81,5 +81,5 @@ module "staging" {
 
   shudder_sqs_url = "${module.server.shudder_sqs_url}"
   s3_bucket = "${module.server.s3_bucket}"
-  server_sg = "${module.server.security_group}"
+  server_sg = "${module.server.internal_security_group}"
 }
