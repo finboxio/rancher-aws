@@ -1,4 +1,10 @@
 
+0.3.3 / 2016-08-08
+==================
+
+  * add server fleet module
+  * remove server from load-balancer on termination
+
 0.3.2 / 2016-08-08
 ==================
 
