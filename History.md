@@ -1,4 +1,11 @@
 
+0.3.2 / 2016-08-08
+==================
+
+  * separate asg-specific resources from base server infrastructure
+  * register with given load balancer after tagging
+  * remove instance from serf on termination message
+
 0.3.1 / 2016-08-08
 ==================
 
