@@ -1,4 +1,12 @@
 
+0.3.1 / 2016-08-08
+==================
+
+  * updates to status page
+  * move clustercheck out of cron and into persistent service
+  * filter out health checks to/from terminated instances
+  * run cron tasks as root
+
 0.3.0 / 2016-08-06
 ==================
 
