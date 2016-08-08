@@ -69,6 +69,7 @@ RUN curl -L https://github.com/rancher/convoy/releases/download/v${CONVOY_VERSIO
 
 # gotpl && checkup installation
 ENV GO_VERSION 1.6.3
+ENV CHECKUP_VERSION 6c6ae13e5576edcf386aaf2c99b2b7537b95d84f
 RUN set -x \
     && curl -SL "https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz" -o go.tar.gz \
     && mkdir -p /usr/local/go /usr/src/go \

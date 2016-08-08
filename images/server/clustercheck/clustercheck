@@ -9,35 +9,99 @@ if [[ "$id" == "" || "$region" == "" ]]; then
   exit 1
 fi
 
+CHECK_INTERVAL=${CHECK_INTERVAL:-60}
 deployment=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
 bucket=${STATUS_BUCKET:?"STATUS_BUCKET must be set"}
+prefix="checks"
 
-m=$(date +%M)
-minute=$((m / 10))
-hour=$(date +%Y-%m-%dT%H)
-timestamp=$(echo $hour:$minute"0:00Z")
+while true; do
+  # Get all instances in this deployment
+  instances=$(aws ec2 describe-instances \
+    --region $region \
+    --filters "Name=tag:rancher-deployment-id,Values=$deployment" \
+    | jq -r '.Reservations[].Instances[] | select(.State.Name != "terminated")')
 
-aws ec2 describe-instances \
-  --region $region \
-  --filters "Name=tag:rancher-deployment-id,Values=$deployment" \
-  | jq -r '.Reservations[].Instances[]
-    | select(.PrivateIpAddress != null)
-    | .endpoint_url = "http://" + .PrivateIpAddress + ":2490"
-    | .attempts = 3
-    | .threshold_rtt = (5 * 1000 * 1000 * 1000)
-    | .type = "http"
-    | .role = (.Tags[] | select(.Key == "rancher-role") | .Value)
-    | .environment = ((.Tags[] | select(.Key == "rancher-environment") | .Value) // "-")
-    | .group = ((.Tags[] | select(.Key == "rancher-group") | .Value) // "-")
-    | .endpoint_name = ((.role + "." + .environment + "." + .group + "." + .InstanceId) | gsub("[.]-"; ""))
-    | { type, endpoint_name, endpoint_url, threshold_rtt, attempts }' \
-  | jq -s '{ checkers: . }' \
-  | jq '.concurrent_checks = 5' \
-  | jq '.timestamp = "'$timestamp'"' \
-  | jq '.storage.provider = "s3"' \
-  | jq '.storage.bucket = "'$bucket'"' \
-  | jq '.storage.region = "'$region'"' \
-  | jq '.storage.check_expiry = (3 * 24 * 60 * 60 * 1000 * 1000 * 1000)' > checkup.json
+  # Generate checks config for instances that have been up longer than 10 minutes
+  grace=$(date -d '10 minutes ago' +%Y-%m-%dT%H:%M:%S.000Z)
+  echo "$instances" \
+    | jq ". \
+      | select(.PrivateIpAddress != null)
+      | select(.LaunchTime < \"$grace\")
+      | .endpoint_url = \"http://\" + .PrivateIpAddress + \":2490\"
+      | .attempts = 1
+      | .threshold_rtt = (3 * 1000 * 1000 * 1000)
+      | .type = \"http\"
+      | .role = (.Tags[] | select(.Key == \"rancher-role\") | .Value)
+      | .environment = ((.Tags[] | select(.Key == \"rancher-environment\") | .Value) // \"-\")
+      | .group = ((.Tags[] | select(.Key == \"rancher-group\") | .Value) // \"-\")
+      | .endpoint_name = ((.role + \".\" + .environment + \".\" + .group + \".\" + .InstanceId) | gsub(\"[.]-\"; \"\"))
+      | { type, endpoint_name, endpoint_url, threshold_rtt, attempts }" \
+    | jq -s '{ checkers: . }' \
+    | jq '.concurrent_checks = 5' \
+    | jq '.storage.provider = "s3"' \
+    | jq '.storage.bucket = "'$bucket'"' \
+    | jq '.storage.prefix = "'$prefix'"' \
+    | jq '.storage.region = "'$region'"' \
+    | jq '.storage.checker = "'$id'"' \
+    | jq '.storage.check_expiry = (3 * 24 * 60 * 60 * 1000 * 1000 * 1000)' > checkup.json
 
-checkup --store
+  checkup --store
 
+  aws s3 sync s3://$bucket/$prefix checks/
+
+  pushd checks
+
+  all=$(cat *$id*.json | jq -s '.[][]' | jq -s .)
+
+  # Remove expired checks
+  oldest=$(date --date='3 days ago' +%s%N)
+  all=$(echo $all \
+    | jq ".[] | select((.timestamp | tostring) > \"$oldest\")" \
+    | jq -s .)
+
+  # Remove checks from instances that are no longer in service
+  nodes=$(echo $instances | jq -r .InstanceId | sort | uniq)
+  checked=$(echo $all | jq -r '.[].title | split(".") | .[-1]' | sort | uniq)
+  remove=$(comm -23 <(echo "$checked") <(echo "$nodes"))
+  for node in $remove; do
+    echo "Removing health checks regarding node $remove from checker $id"
+    aws s3 rm s3://$bucket/$prefix/all-$node.json
+    all=$(echo "$all" | jq -r ".[] | select(.title | contains(\"$node\") | not)" | jq -s .)
+  done
+
+  echo $all > all-$id.json
+  sleep 1
+
+  aws s3 cp all-$id.json s3://$bucket/$prefix/all-$id.json
+  ls *-$id-check.json | xargs -I{} aws s3 rm s3://$bucket/$prefix/{}
+  ls *-$id-check.json | xargs rm
+
+  # terminate instances with > 50% failures (at least 3 checks) in last 5 minutes
+  for node in $nodes; do
+    oldest=$(date --date='5 minutes ago' +%s%N)
+
+    healthy=$(cat all-$id.json \
+      | jq ".[] \
+        | select((.timestamp | tostring) > \"$oldest\") \
+        | select(.title | contains(\"$node\")) \
+        | select(.healthy)" \
+      | jq -s length)
+
+    total=$(cat all-$id.json \
+      | jq ".[] \
+        | select((.timestamp | tostring) > \"$oldest\") \
+        | select(.title | contains(\"$node\"))" \
+      | jq -s length)
+
+    threshold=$((total / 2))
+
+    if [[ $healthy -le $threshold && $total -ge 3 ]]; then
+      echo "Instance $node is failing cluster checks." | slack -p -a 'danger'
+      aws ec2 terminate-instances --region $region  --instance-ids $node
+    fi
+  done
+
+  popd
+
+  sleep $CHECK_INTERVAL
+done
