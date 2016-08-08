@@ -5,6 +5,7 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   target_capacity = "${var.cluster_size}"
   allocation_strategy = "${var.spot_allocation}"
   valid_until = "2020-01-01T00:00:00Z"
+  terminate_instances_with_expiration = false
 
   launch_specification {
     instance_type = "${element(split(",", var.instance_types), 0 / length(split(",",var.availability_zones)))}"
