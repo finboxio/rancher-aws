@@ -11,6 +11,21 @@ fi
 
 deployment=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
 
+tags=$(aws ec2 describe-instances \
+  --region $region \
+  --instance-ids $id \
+  | jq '.Reservations[].Instances[].Tags[]')
+
+fleet=$(echo "$tags" | jq -r 'select(.Key == "aws:ec2spot:fleet-request-id") | .Value')
+asg=$(echo "$tags" | jq -r 'select(.Key == "aws:autoscaling:groupName") | .Value')
+
+tag_resource=
+if [[ "$fleet" != "" ]]; then
+  tag_resource="-tag fleet=$fleet"
+elif [[ "$asg" != "" ]]; then
+  tag_resource="-tag asg=$asg"
+fi
+
 ips=$(aws ec2 describe-instances \
   --region $region \
   --filters "Name=tag:rancher-deployment-id,Values=$deployment" \
@@ -25,5 +40,6 @@ exec serf agent \
   -snapshot /etc/serf/snapshot \
   -tag up=$up \
   -tag role=server \
+  $tag_resource \
   -rejoin \
   $ips
