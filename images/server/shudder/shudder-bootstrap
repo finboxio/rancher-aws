@@ -227,6 +227,9 @@ while true; do
           --region $region \
           --name $rule_name
 
+        # Remove host from serf (if not already removed)
+        system-docker exec serf serf force-leave $terminating_id
+
         echo "Cleaned up all traces of host $terminating_id" | slack -p -a "good" &> /dev/null
       fi
 
