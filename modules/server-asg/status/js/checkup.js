@@ -96,9 +96,6 @@ checkup.makeTimeTag = function(ms) {
 			+ '</time>';
 }
 
-// All check files must have this suffix.
-checkup.checkFileSuffix = "-check.json";
-
 // Width and height of chart viewport scale
 checkup.CHART_WIDTH  = 600;
 checkup.CHART_HEIGHT = 200;
@@ -204,7 +201,7 @@ checkup.loadScript = function(url, callback) {
 
 	script.onreadystatechange = callback;
 	script.onload = callback;
-	
+
 	head.appendChild(script);
 };
 

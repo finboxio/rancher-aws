@@ -13,7 +13,8 @@ checkup.config = {
 		"AccessKeyID": "${access_key_id}",
 		"SecretAccessKey": "${secret_access_key}",
 		"Region": "${region}",
-		"BucketName": "${bucket}"
+		"BucketName": "${bucket}",
+		"Prefix": "checks/"
 	},
 
 	// The text to display along the top bar depending on overall status.

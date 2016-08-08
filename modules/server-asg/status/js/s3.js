@@ -7,7 +7,7 @@ S3 Storage Adapter for Checkup.js
 var checkup = checkup || {};
 
 checkup.storage = (function() {
-	var bucket, bucketName, region;
+	var bucket, bucketName, region, prefix;
 
 	// getCheckFileList gets the list of check files within
 	// the given timeframe (as a unit of nanoseconds) to
@@ -18,7 +18,8 @@ checkup.storage = (function() {
 
 		function getObjectsAfter(marker) {
 			bucket.listObjects({
-				Marker: marker
+				Marker: marker,
+        Prefix: prefix
 			}, function(err, data) {
 				allObjects = allObjects.concat(data.Contents);
 				if (data.IsTruncated) {
@@ -27,7 +28,7 @@ checkup.storage = (function() {
 					// TODO: Can this be converted to a map() function?
 					var keys = [];
 					for (var i = 0; i < allObjects.length; i++) {
-						if (allObjects[i].Key.indexOf(checkup.checkFileSuffix) != -1)
+						if (allObjects[i].Key.indexOf('all') != -1)
 							keys.push(allObjects[i].Key);
 					}
 					callback(keys);
@@ -54,6 +55,7 @@ checkup.storage = (function() {
 
 		bucketName = cfg.BucketName;
 		region = cfg.Region;
+    prefix = cfg.Prefix;
 	};
 
 	// getChecksWithin gets all the checks within timeframe as a unit
