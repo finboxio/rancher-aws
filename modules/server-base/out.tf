@@ -1,4 +1,4 @@
-output "s3_bucket" {
+output "config_bucket" {
   value = "${aws_s3_bucket.rancher-bucket.bucket}"
 }
 

@@ -16,8 +16,8 @@ rancher:
     RANCHER_HOSTNAME: ${rancher_hostname}
     RANCHER_SCHEME: https
     SQS_URL: ${shudder_sqs_url}
-    CREDENTIALS_FILE: s3://${s3_bucket}/credentials
-    TOKEN_FILE: s3://${s3_bucket}/${environment_name}.token
+    CREDENTIALS_FILE: s3://${config_bucket}/credentials
+    TOKEN_FILE: s3://${config_bucket}/${environment_name}.token
     ENVIRONMENT_NAME: ${environment_name}
     ENVIRONMENT_TYPE: ${environment_type}
     TERMINATOR_PORT: 2489

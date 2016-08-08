@@ -6,8 +6,8 @@ output "deployment_id" {
   value = "${var.deployment_id}"
 }
 
-output "s3_bucket" {
-  value = "${module.base.s3_bucket}"
+output "config_bucket" {
+  value = "${module.base.config_bucket}"
 }
 
 output "status_endpoint" {

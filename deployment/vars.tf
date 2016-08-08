@@ -19,8 +19,9 @@ variable "rancher_admin_password" {}
 variable "slack_webhook" {}
 
 variable "server_nodes" {}
-variable "server_instance_type" {}
 variable "server_spot_price" {}
+variable "server_spot_allocation" {}
+variable "server_instance_types" {}
 variable "server_availability_zones" {}
 
 variable "staging_default_nodes" {}

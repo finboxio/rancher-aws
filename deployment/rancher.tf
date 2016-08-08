@@ -34,7 +34,7 @@ data "atlas_artifact" "rancher-aws-host" {
 }
 
 module "server" {
-  source = "../modules/server-asg"
+  source = "../modules/server-fleet"
 
   deployment_id = "${var.deployment_id}"
   version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
@@ -47,8 +47,9 @@ module "server" {
   cloudfront_certificate_id = "${var.cloudfront_certificate_id}"
 
   cluster_size = "${var.server_nodes}"
-  instance_type = "${var.server_instance_type}"
   spot_price = "${var.server_spot_price}"
+  spot_allocation = "${var.server_spot_allocation}"
+  instance_types = "${var.server_instance_types}"
   availability_zones = "${var.server_availability_zones}"
 
   rancher_hostname = "${var.rancher_hostname}"
@@ -80,6 +81,6 @@ module "staging" {
   availability_zones = "${var.staging_default_availability_zones}"
 
   shudder_sqs_url = "${module.server.shudder_sqs_url}"
-  s3_bucket = "${module.server.s3_bucket}"
+  config_bucket = "${module.server.config_bucket}"
   server_sg = "${module.server.internal_security_group}"
 }

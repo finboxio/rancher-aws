@@ -14,7 +14,7 @@ variable "zone_id" {}
 variable "certificate_id" {}
 
 variable "shudder_sqs_url" {}
-variable "s3_bucket" {}
+variable "config_bucket" {}
 variable "server_sg" {}
 
 variable "ami" {}

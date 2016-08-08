@@ -8,7 +8,7 @@ data "template_file" "rancher-userdata-template" {
     environment_type       = "${var.type}"
     rancher_hostname       = "${var.rancher_hostname}"
     shudder_sqs_url        = "${var.shudder_sqs_url}"
-    s3_bucket              = "${var.s3_bucket}"
+    config_bucket              = "${var.config_bucket}"
     slack_webhook          = "${var.slack_webhook}"
     version                = "${var.version}"
   }

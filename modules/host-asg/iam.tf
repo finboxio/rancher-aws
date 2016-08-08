@@ -24,7 +24,7 @@ data "template_file" "rancher-ec2-policy-data" {
   vars {
     name          = "rancher"
     deployment_id = "${var.deployment_id}"
-    s3_bucket     = "${var.s3_bucket}"
+    config_bucket     = "${var.config_bucket}"
   }
 }
 

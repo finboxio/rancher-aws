@@ -228,6 +228,7 @@ rancher:
       environment:
         - SLACK_*
         - TERMINATOR_PORT
+        - ELB_NAME
       volumes:
         - /var/run/system-docker.sock:/var/run/system-docker.sock
         - /usr/bin/system-docker:/usr/bin/system-docker

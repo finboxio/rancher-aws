@@ -12,8 +12,8 @@ variable "certificate_id" {}
 variable "cloudfront_certificate_id" {}
 
 variable "ami" {}
-variable "version" {}
 
+variable "version" {}
 variable "rancher_hostname" {}
 variable "mysql_root_password" {}
 variable "mysql_volume_size" {}

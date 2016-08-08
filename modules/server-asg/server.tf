@@ -4,18 +4,12 @@ module "base" {
 
   region = "${var.region}"
   availability_zones = "${var.availability_zones}"
-  instance_type = "${var.instance_type}"
-  spot_price = "${var.spot_price}"
-  ebs_optimized = "${var.ebs_optimized}"
   cluster_size = "${var.cluster_size}"
-  ssh_keypair = "${var.ssh_keypair}"
   zone_id = "${var.zone_id}"
   certificate_id = "${var.certificate_id}"
   cloudfront_certificate_id = "${var.cloudfront_certificate_id}"
 
-  ami = "${var.ami}"
   version = "${var.version}"
-
   rancher_hostname = "${var.rancher_hostname}"
   mysql_root_password = "${var.mysql_root_password}"
   mysql_volume_size = "${var.mysql_volume_size}"
