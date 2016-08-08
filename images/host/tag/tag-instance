@@ -4,6 +4,7 @@ TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID?"TAG_DEPLOYMENT_ID must be set"}
 TAG_DEPLOYMENT_ENVIRONMENT=${TAG_DEPLOYMENT_ENVIRONMENT?"TAG_DEPLOYMENT_ENVIRONMENT must be set"}
 TAG_DEPLOYMENT_GROUP=${TAG_DEPLOYMENT_GROUP?"TAG_DEPLOYMENT_GROUP must be set"}
 TAG_DEPLOYMENT_ROLE="host"
+ELB_NAME=${ELB_NAME}
 
 id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
@@ -22,3 +23,11 @@ aws ec2 create-tags \
          Key=rancher-group,Value=$TAG_DEPLOYMENT_GROUP \
          Key=rancher-role,Value=$TAG_DEPLOYMENT_ROLE \
          Key=Name,Value=rancher-$TAG_DEPLOYMENT_ID-$TAG_DEPLOYMENT_ENVIRONMENT-$TAG_DEPLOYMENT_GROUP
+
+# Register with ELB (if provided)
+if [[ "$ELB_NAME" != "" ]]; then
+  aws elb register-instances-with-load-balancer \
+    --region $region \
+    --load-balancer-name $ELB_NAME \
+    --instances $id
+fi
