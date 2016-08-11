@@ -35,7 +35,6 @@ rancher:
   environment:
     ELB_NAME: ${elb_name}
     TAG_DEPLOYMENT_ID: ${deployment_id}
-    CLUSTER_CAPACITY: ${cluster_size}
     S3_BUCKET: ${rancher_s3_bucket}
     STATUS_BUCKET: ${rancher_status_bucket}
     CREDENTIALS_FILE: s3://${rancher_s3_bucket}/credentials
@@ -96,9 +95,9 @@ rancher:
         - /etc/docker:/host/etc/docker
         - /var/run/convoy:/var/run/convoy
         - /var/lib/rancher/convoy:/var/lib/rancher/convoy:shared
-    tag:
+    tag-sync:
       image: finboxio/rancher-aws-server:${version}
-      entrypoint: [ "tag-instance" ]
+      entrypoint: [ "tag-sync" ]
       restart: on-failure
       net: host
       labels:
@@ -106,7 +105,6 @@ rancher:
         - io.rancher.os.after=console
       environment:
         - TAG_*
-        - ELB_NAME
     serf:
       image: finboxio/rancher-aws-server:${version}
       entrypoint: [ "serf-bootstrap" ]
@@ -117,8 +115,11 @@ rancher:
         - io.rancher.os.after=tag,console
       environment:
         - TAG_*
+        - ELB_NAME
       volumes:
         - /etc/serf:/etc/serf
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
     haproxy-log:
       image: finboxio/rancher-aws-server:${version}
       entrypoint: [ "rsyslogd" ]
@@ -202,7 +203,7 @@ rancher:
         - /usr/bin/system-docker:/usr/bin/system-docker
     shudder:
       image: finboxio/rancher-aws-server:${version}
-      entrypoint: [ 'shudder-bootstrap' ]
+      entrypoint: [ 'shudder' ]
       restart: on-failure
       net: host
       labels:
@@ -277,9 +278,9 @@ rancher:
       environment:
         - HEALTHCHECK_PORT
         - HAPROXY_*
-    clustercheck:
+    cluster-monitor:
       image: finboxio/rancher-aws-server:${version}
-      entrypoint: [ 'clustercheck' ]
+      entrypoint: [ 'cluster-monitor' ]
       restart: always
       net: host
       labels:
@@ -288,4 +289,14 @@ rancher:
       environment:
         - TAG_*
         - STATUS_BUCKET
+        - SLACK_*
+    fleet-monitor:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ 'fleet-monitor' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
         - SLACK_*

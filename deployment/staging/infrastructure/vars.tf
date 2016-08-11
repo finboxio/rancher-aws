@@ -3,7 +3,7 @@ variable "name" {}
 variable "deployment_id" {}
 variable "shudder_sqs_url" {}
 variable "config_bucket" {}
-variable "server_sg" {}
+variable "server_security_group" {}
 variable "rancher_hostname" {}
 
 variable "ssh_keypair" {}
@@ -13,10 +13,16 @@ variable "certificate_id" {}
 variable "region" {}
 variable "availability_zones" {}
 variable "cluster_size" {}
-variable "instance_type" {}
+variable "spot_pools" {}
 variable "spot_price" {}
+variable "spot_allocation" {}
 
 variable "slack_webhook" {}
 
 variable "ami" {}
 variable "version" { default = "" }
+
+variable "mongo_spot_pools" {}
+
+variable "analyst_cluster_size" {}
+variable "analyst_spot_pools" {}

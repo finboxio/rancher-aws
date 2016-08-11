@@ -5,7 +5,6 @@ resource "aws_autoscaling_group" "rancher-asg" {
   min_size             = "${var.cluster_size}"
   desired_capacity     = "${var.cluster_size}"
   availability_zones   = [ "${split(",", var.availability_zones)}" ]
-  load_balancers       = [ "${aws_elb.rancher-elb.id}" ]
 
   lifecycle {
     create_before_destroy = true

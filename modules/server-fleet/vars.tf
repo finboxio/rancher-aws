@@ -7,7 +7,7 @@ variable "zone_id" {}
 variable "certificate_id" {}
 variable "cloudfront_certificate_id" {}
 
-variable "instance_types" {}
+variable "spot_pools" {}
 variable "spot_price" {}
 variable "spot_allocation" {}
 variable "ebs_optimized" { default = false }

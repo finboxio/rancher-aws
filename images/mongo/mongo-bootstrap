@@ -1,0 +1,16 @@
+#! /bin/bash
+
+set -e
+
+while [[ ! -e ${MOUNT_POINT}/convoy.ready ]]; do
+  echo "Waiting for convoy mount"
+  sleep 10
+done
+
+mkdir -p ${MOUNT_POINT}/db &> /dev/null
+chown -R mongodb:mongodb ${MOUNT_POINT}
+
+# Start init process to setup default accounts
+mongo-init &
+
+exec dosu mongodb mongod --dbpath ${MOUNT_POINT}/db --auth

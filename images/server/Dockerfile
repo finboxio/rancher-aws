@@ -115,13 +115,14 @@ RUN cp /var/lib/aws/slack/slack /usr/bin/slack \
     && cp /var/lib/aws/terminator/service /etc/terminator/service \
     && cp /var/lib/aws/rancher/rancher-bootstrap /usr/bin/rancher-bootstrap \
     && cp /var/lib/aws/convoy/convoy-bootstrap /usr/bin/convoy-bootstrap \
-    && cp /var/lib/aws/shudder/shudder-bootstrap /usr/bin/shudder-bootstrap \
+    && cp /var/lib/aws/shudder/shudder /usr/bin/shudder \
     && cp /var/lib/aws/reporter/reporter /usr/bin/reporter \
     && cp /var/lib/aws/docker-monitor/docker-monitor /usr/bin/docker-monitor \
     && cp /var/lib/aws/backup/backup /usr/bin/backup \
-    && cp /var/lib/aws/tag/tag-instance /usr/bin/tag-instance \
+    && cp /var/lib/aws/tag-sync/tag-sync /usr/bin/tag-sync \
     && mkdir -p /etc/healthcheck \
     && cp /var/lib/aws/healthcheck/healthcheck /usr/bin/healthcheck \
     && cp /var/lib/aws/healthcheck/healthcheck-bootstrap /usr/bin/healthcheck-bootstrap \
     && cp /var/lib/aws/healthcheck/service /etc/healthcheck/service \
-    && cp /var/lib/aws/clustercheck/clustercheck /usr/bin/clustercheck
+    && cp /var/lib/aws/cluster-monitor/cluster-monitor /usr/bin/cluster-monitor \
+    && cp /var/lib/aws/fleet-monitor/fleet-monitor /usr/bin/fleet-monitor

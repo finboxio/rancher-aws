@@ -49,7 +49,7 @@ module "server" {
   cluster_size = "${var.server_nodes}"
   spot_price = "${var.server_spot_price}"
   spot_allocation = "${var.server_spot_allocation}"
-  instance_types = "${var.server_instance_types}"
+  spot_pools = "${var.server_spot_pools}"
   availability_zones = "${var.server_availability_zones}"
 
   rancher_hostname = "${var.rancher_hostname}"
@@ -70,17 +70,28 @@ output "status_endpoint" {
 module "staging" {
   source = "./staging/infrastructure"
 
-  name = "Staging"
   deployment_id = "${module.server.deployment_id}"
+  rancher_hostname = "${module.server.rancher_hostname}"
+  name = "Staging"
   version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
 
-  rancher_hostname = "${module.server.rancher_hostname}"
+  region = "${var.region}"
+  ssh_keypair = "${var.ssh_keypair}"
+  zone_id = "${var.zone_id}"
+  certificate_id = "${var.staging_certificate_id}"
+
   cluster_size = "${var.staging_default_nodes}"
-  instance_type = "${var.staging_default_instance_type}"
   availability_zones = "${var.staging_default_availability_zones}"
+  spot_pools = "${var.staging_default_spot_pools}"
+  spot_allocation = "${var.staging_default_spot_allocation}"
 
   shudder_sqs_url = "${module.server.shudder_sqs_url}"
   config_bucket = "${module.server.config_bucket}"
-  server_sg = "${module.server.internal_security_group}"
+  server_security_group = "${module.server.internal_security_group}"
+
+  mongo_spot_pools = "${var.staging_mongo_spot_pools}"
+
+  analyst_cluster_size = "${var.staging_analyst_nodes}"
+  analyst_spot_pools = "${var.staging_analyst_spot_pools}"
 }

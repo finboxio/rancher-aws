@@ -1,0 +1,22 @@
+#! /bin/sh
+
+if [[ "$DISABLE_THP" == "true" ]]; then
+  echo 'never' > /sys/kernel/mm/transparent_hugepage/enabled
+  echo 'never' > /sys/kernel/mm/transparent_hugepage/defrag
+fi
+
+/usr/bin/convoy-mount &
+
+mount --rbind /host/dev /dev
+
+# Reset previous mount
+rm /var/run/convoy/convoy.sock
+rm /var/lib/rancher/convoy/convoy.cfg
+umount ${MOUNT_POINT}
+if [[ -e /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json ]]; then
+  cat /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json \
+    | jq '.MountPoint = ""' \
+    > /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json
+fi
+
+exec convoy daemon --drivers ebs

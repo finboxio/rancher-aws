@@ -34,9 +34,9 @@ RUN curl -L ftp://anduin.linuxfromscratch.org/BLFS/xinetd/xinetd-${XINETD_VERSIO
 
 ADD . /var/lib/aws
 RUN cp /var/lib/aws/slack/slack /usr/bin/slack \
-    && cp /var/lib/aws/tag/tag-instance /usr/bin/tag-instance \
+    && cp /var/lib/aws/tag-sync/tag-sync /usr/bin/tag-sync \
     && cp /var/lib/aws/serf/serf-bootstrap /usr/bin/serf-bootstrap \
-    && cp /var/lib/aws/shudder/shudder-bootstrap /usr/bin/shudder-bootstrap \
+    && cp /var/lib/aws/shudder/shudder /usr/bin/shudder \
     && cp /var/lib/aws/rancher/rancher-bootstrap /usr/bin/rancher-bootstrap \
     && mkdir -p /etc/terminator \
     && cp /var/lib/aws/terminator/terminator /usr/bin/terminator \
@@ -46,4 +46,5 @@ RUN cp /var/lib/aws/slack/slack /usr/bin/slack \
     && cp /var/lib/aws/healthcheck/healthcheck /usr/bin/healthcheck \
     && cp /var/lib/aws/healthcheck/healthcheck-bootstrap /usr/bin/healthcheck-bootstrap \
     && cp /var/lib/aws/healthcheck/service /etc/healthcheck/service \
-    && cp /var/lib/aws/docker-monitor/docker-monitor /usr/bin/docker-monitor
+    && cp /var/lib/aws/docker-monitor/docker-monitor /usr/bin/docker-monitor \
+    && cp /var/lib/aws/fleet-monitor/fleet-monitor /usr/bin/fleet-monitor

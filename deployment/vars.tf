@@ -21,9 +21,14 @@ variable "slack_webhook" {}
 variable "server_nodes" {}
 variable "server_spot_price" {}
 variable "server_spot_allocation" {}
-variable "server_instance_types" {}
+variable "server_spot_pools" {}
 variable "server_availability_zones" {}
 
+variable "staging_certificate_id" {}
 variable "staging_default_nodes" {}
 variable "staging_default_availability_zones" {}
-variable "staging_default_instance_type" {}
+variable "staging_default_spot_allocation" {}
+variable "staging_default_spot_pools" {}
+variable "staging_mongo_spot_pools" {}
+variable "staging_analyst_nodes" {}
+variable "staging_analyst_spot_pools" {}

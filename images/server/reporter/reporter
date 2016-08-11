@@ -1,6 +1,5 @@
 #! /bin/bash
 
-CLUSTER_CAPACITY=${CLUSTER_CAPACITY?"CLUSTER_CAPACITY must be set"}
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?"MYSQL_ROOT_PASSWORD must be set"}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME?"RANCHER_HOSTNAME must be set"}
 
@@ -60,22 +59,6 @@ healthy_streak=0
 while true; do
   new_pass="false"
   fail_count=0
-
-  # Is cluster at full capacity?
-  servers=$(serf members -format json \
-    | jq -r '.members
-      | sort_by(.tags.up)
-      | .[]
-      | select(.status == "alive")
-      | select(.tags.role == "server")
-      | .addr' \
-    | awk -F: '{ print $1 }' \
-    | wc -w)
-  pass="the rancher server pool is now at full capacity ($servers of $CLUSTER_CAPACITY online)"
-  fail="the rancher server pool is running at reduced capacity ($servers of $CLUSTER_CAPACITY online)"
-  passed=$(test "$servers" -ge "$CLUSTER_CAPACITY" && echo "true")
-  UNHEALTHY_SIZE=$(check_health $UNHEALTHY_SIZE)
-  if [[ "$UNHEALTHY_SIZE" -gt 0 ]]; then fail_count=$((fail_count + 1)); fi
 
   # Is mysql healthy?
   pass="its local mysql instance is now healthy"

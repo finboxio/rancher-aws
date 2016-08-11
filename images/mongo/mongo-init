@@ -1,0 +1,47 @@
+#! /bin/bash
+
+
+if [[ ! -e /etc/mongo/init.js ]]; then
+MONGO_USER=${MONGO_USER:?"MONGO_USER must be set"}
+MONGO_PASSWORD=${MONGO_PASSWORD:?"MONGO_PASSWORD must be set"}
+MONGO_DATABASE=${MONGO_DATABASE:?"MONGO_DATABASE must be set"}
+
+MMS_USER=${MMS_USER}
+MMS_PASSWORD=${MMS_PASSWORD}
+cat <<-INIT > /etc/mongo/init.js
+  db.createUser({
+    "user": "${MONGO_USER}",
+    "pwd": "${MONGO_PASSWORD}",
+    "roles": [
+      { "role": "root", "db": "admin" }
+    ]
+  });
+
+  db.auth("${MONGO_USER}", "${MONGO_PASSWORD}");
+
+  db.createUser({
+    "user": "${MMS_USER}",
+    "pwd": "${MMS_PASSWORD}",
+    "roles": [
+      { "role": "clusterMonitor", "db": "admin" }
+    ]
+  });
+
+  db.grantRolesToUser('${MONGO_USER}', [ { role: "dbOwner", db: "${MONGO_DATABASE}" } ])
+  db = db.getSiblingDB('finboxio-staging')
+  db.createUser({
+    "user": "${MONGO_USER}",
+    "pwd": "${MONGO_PASSWORD}",
+    "roles": [
+      { "role": "dbOwner", "db": "${MONGO_DATABASE}" }
+    ]
+  });
+INIT
+fi
+
+while ! mongo --eval 'printjson({ "hi": "bye" })' &> /dev/null; do
+  echo "Waiting for mongo to come online..."
+  sleep 10
+done
+
+mongo localhost:27017/admin /etc/mongo/init.js

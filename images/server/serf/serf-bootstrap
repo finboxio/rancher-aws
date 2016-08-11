@@ -11,6 +11,34 @@ fi
 
 deployment=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
 
+ELB_NAME=${ELB_NAME}
+TAG_CONTAINER=${TAG_CONTAINER:-tag-sync}
+GRACE_PERIOD=${GRACE_PERIOD:-30}
+
+# wait here to minimize possibility of potential race where two servers come
+# up at the same time and each attempt to lookup serf peers before the other's
+# tags are visible. this would leave us with a split brain until one or more
+# additional servers came up. I assume this is a pretty unlikely scenario if
+# it's even possible, but better safe than sorry
+
+if ! (system-docker inspect $TAG_CONTAINER &> /dev/null); then
+  echo "Cannot bootstrap serf because tag-sync is not running. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
+current=$(date +%s)
+started=$(date -d "$(system-docker inspect $TAG_CONTAINER \
+  | jq -r .[0].State.StartedAt \
+  | cut -d . -f 1 \
+  | awk '{print $1}' \
+  | tr 'T' ' ')" +%s)
+uptime=$((current - started))
+if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then
+  echo "Cannot bootstrap serf because tag-sync is not ready. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
+
 tags=$(aws ec2 describe-instances \
   --region $region \
   --instance-ids $id \
@@ -31,6 +59,14 @@ ips=$(aws ec2 describe-instances \
   --filters "Name=tag:rancher-deployment-id,Values=$deployment" \
   | jq -r '.Reservations[].Instances[].PrivateIpAddress | select( . != null )' \
   | xargs -I{} echo "-retry-join "{})
+
+# Register with ELB (if provided)
+if [[ "$ELB_NAME" != "" ]]; then
+  aws elb register-instances-with-load-balancer \
+    --region $region \
+    --load-balancer-name $ELB_NAME \
+    --instances $id
+fi
 
 up=$(date +%s%N)
 exec serf agent \

@@ -19,13 +19,14 @@ fi
 
 # Allow grace period to make sure serf is stable before registering
 current=$(date +%s)
-started=$(date -d "$(system-docker inspect $SERF_CONTAINER \
-  | jq -r .[0].State.StartedAt \
+started_at=$(system-docker inspect $SERF_CONTAINER | jq -r .[0].State.StartedAt)
+echo "serf started at $started_at"
+started=$(date -d "$(echo $started_at \
   | cut -d . -f 1 \
   | awk '{print $1}' \
   | tr 'T' ' ')" +%s)
 uptime=$((current - started))
-if [[ "$uptime" -lt "$GRACE_PERIOD" ]]; then
+if [[ "$started_at" == "" || "$started_at" == "null" || "$uptime" -lt "$GRACE_PERIOD" ]]; then
   echo "Cannot bootstrap rancher host because serf is not ready. Exiting in 30s"
   sleep 30
   exit 1
@@ -48,7 +49,7 @@ members=($(serf members -format json \
     | .addr' \
   | awk -F: '{ print $1 }'))
 
-if [[ "$self" == "" || "$public" == "" || "$instance_id" == "" || "$region" == "" || "$zone" == "" || "$instance_type" == "" ]]; then
+if [[ "$tags" == "" || "$tags" == "null" || "${members[0]}" == "" || "$self" == "" || "$public" == "" || "$instance_id" == "" || "$region" == "" || "$zone" == "" || "$instance_type" == "" ]]; then
   echo "Cannot bootstrap rancher host because instance metadata is not available. Exiting in 30s"
   sleep 30
   exit 1

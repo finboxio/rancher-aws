@@ -1,7 +1,9 @@
 #!/bin/bash
 
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+my_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+my_region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+
+ELB_NAME=${ELB_NAME}
 RANCHER_SCHEME=${RANCHER_SCHEME:?"RANCHER_SCHEME must be set"}
 RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
 CREDENTIALS_FILE=${CREDENTIALS_FILE:?"CREDENTIALS_FILE must be set"}
@@ -35,8 +37,19 @@ if ! mkdir /tmp/dead 2>/dev/null; then
   exit
 fi
 
-echo "Rancher host $INSTANCE_ID received a termination signal" | \
+echo "Rancher host $my_id received a termination signal" | \
   slack -p -a "warning" &> /dev/null
+
+#
+# Remove myself from load balancer (if available)
+#
+
+if [[ "$ELB_NAME" != "" ]]; then
+  aws elb deregister-instances-from-load-balancer \
+    --region $my_region \
+    --load-balancer-name $ELB_NAME \
+    --instances $my_id
+fi
 
 aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
 if [[ -e ./credentials ]]; then source ./credentials; fi
@@ -53,7 +66,7 @@ if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" ]]; then
   host_id=$(curl -sf -X GET \
       -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
       -H 'Accept: application/json' \
-      "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts?name=${INSTANCE_ID}" \
+      "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts?name=${my_id}" \
       | jq -r ".data[] | .id")
 
   if [[ "$host_id" != "" ]]; then
@@ -102,11 +115,11 @@ if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" ]]; then
     echo "Successfully decommissioned rancher agent $host_id" | \
       slack -p -a "good" &> /dev/null
   else
-    echo "Hostname ${INSTANCE_ID} is not registered with rancher. Skipping host deactivation." | \
+    echo "Hostname ${my_id} is not registered with rancher. Skipping host deactivation." | \
       slack -p -a "danger" &> /dev/null
   fi
 else
-  echo "Rancher credentials are not available to ${INSTANCE_ID}. You may need to deactivate this host manually at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}" | \
+  echo "Rancher credentials are not available to ${my_id}. You may need to deactivate this host manually at ${RANCHER_SCHEME}://${RANCHER_HOSTNAME}" | \
     slack -p -a "danger" &> /dev/null
 fi
 

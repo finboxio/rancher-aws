@@ -8,15 +8,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   terminate_instances_with_expiration = false
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 0 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 0 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 0)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 0)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 0)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 0)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -24,15 +24,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 1 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 1 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 1)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 1)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 1)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 1)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -40,15 +40,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 2 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 2 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 2)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 2)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 2)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 2)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -56,15 +56,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 3 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 3 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 3)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 3)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 3)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 3)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -72,15 +72,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 4 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 4 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 4)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 4)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 4)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 4)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -88,15 +88,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 5 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 5 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 5)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 5)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 5)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 5)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -104,15 +104,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 6 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 6 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 6)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 6)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 6)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 6)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -120,15 +120,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 7 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 7 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 7)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 7)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 7)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 7)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -136,15 +136,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 8 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 8 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 8)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 8)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 8)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 8)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -152,15 +152,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 9 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 9 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 9)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 9)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 9)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 9)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -168,15 +168,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 10 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 10 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 10)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 10)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 10)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 10)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -184,15 +184,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 11 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 11 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 11)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 11)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 11)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 11)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -200,15 +200,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 12 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 12 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 12)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 12)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 12)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 12)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -216,15 +216,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 13 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 13 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 13)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 13)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 13)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 13)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -232,15 +232,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 14 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 14 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 14)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 14)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 14)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 14)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"
@@ -248,15 +248,15 @@ resource "aws_spot_fleet_request" "rancher-fleet" {
   }
 
   launch_specification {
-    instance_type = "${element(split(",", var.instance_types), 15 / length(split(",",var.availability_zones)))}"
-    availability_zone = "${element(split(",", var.availability_zones), 15 % length(split(",",var.availability_zones)))}"
+    instance_type = "${element(split(":", element(split(",", var.spot_pools), 15)), 0)}"
+    availability_zone = "${element(split(":", element(split(",", var.spot_pools), 15)), 1)}"
+    weighted_capacity = "${coalesce(element(split(":", element(split(",", var.spot_pools), 15)), 2), 1)}"
+    spot_price = "${coalesce(element(split(":", element(split(",", var.spot_pools), 15)), 3), var.spot_price)}"
     ami = "${var.ami}"
     user_data = "${module.base.user_data}"
     iam_instance_profile = "${module.base.instance_profile}"
-    ebs_optimized = "${var.ebs_optimized}"
     key_name = "${var.ssh_keypair}"
     monitoring = false
-    weighted_capacity = 1
     vpc_security_group_ids = [
       "${module.base.external_security_group}",
       "${module.base.internal_security_group}"

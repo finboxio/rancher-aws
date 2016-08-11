@@ -1,0 +1,67 @@
+#! /bin/bash
+
+region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+my_ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+my_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+if [[ "$region" == "" || "$my_ip" == "" || "$my_id" == "" ]]; then
+  echo "Cannot start shudder because instance metadata is not available. Exiting in 30s"
+  sleep 30
+  exit 1
+fi
+
+tags=$(aws ec2 describe-instances \
+  --region $region \
+  --instance-ids $my_id \
+  | jq '.Reservations[].Instances[].Tags[]')
+
+my_fleet=$(echo "$tags" | jq -r 'select(.Key == "aws:ec2spot:fleet-request-id") | .Value')
+
+if [[ "$my_fleet" == "" ]]; then
+  echo "This instance is not a spot fleet member. Fleet monitor is not necessary."
+  exit 0
+fi
+
+#
+# Check status of our spot fleet request every 5 min, and if the fleet is no
+# longer active, terminate its oldest instance.
+#
+# In order to space out terminations (so we don't take down a whole fleet
+# at once) we schedule the termination of the oldest fleet member only
+# if we are the youngest fleet member.
+#
+
+while true; do
+  sleep 300
+
+  youngest=($(serf members -format json | jq -r '.members
+    | sort_by(.tags.up)
+    | reverse
+    | .[]
+    | select(.status == "alive")
+    | select(.tags.fleet == "'$my_fleet'")
+    | .name'))
+
+  if [[ "${youngest[0]}" == "$my_id" ]]; then
+    fleet_state=$(aws ec2 describe-spot-fleet-requests \
+      --region $region \
+      --spot-fleet-request-id $my_fleet \
+      | jq -r '.SpotFleetRequestConfigs[].SpotFleetRequestState')
+
+    if [[ "$fleet_state" != "active" ]]; then
+      oldest=($(serf members -format json | jq -r '.members
+        | sort_by(.tags.up)
+        | .[]
+        | select(.status == "alive")
+        | select(.tags.fleet == "'$my_fleet'")
+        | .name'))
+
+      echo "Terminating instance $oldest because its spot fleet request has been cancelled" | slack -p -a 'warning'
+      aws ec2 terminate-instances --region $region --instance-ids ${oldest[0]}
+    fi
+
+    if [[ "${oldest[0]}" == "$my_ip" ]]; then
+      exit 0
+    fi
+  fi
+done

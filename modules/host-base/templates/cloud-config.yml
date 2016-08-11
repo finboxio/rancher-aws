@@ -1,0 +1,144 @@
+#cloud-config
+write_files:
+  - path: /etc/profile.d/alias.sh
+    permissions: "0755"
+    owner: root
+    content: |
+      alias serf="sudo system-docker exec -it serf serf"
+      alias curl="sudo system-docker exec -it serf curl"
+      alias rocker="sudo system-docker"
+      alias update="sudo system-docker pull finboxio/rancher-aws-host:${version}"
+rancher:
+  environment:
+    ELB_NAME: ${elb_name}
+    TAG_DEPLOYMENT_ID: ${lower(deployment_id)}
+    TAG_DEPLOYMENT_ENVIRONMENT: ${lower(environment_name)}
+    TAG_DEPLOYMENT_GROUP: ${lower(environment_group)}
+    RANCHER_HOSTNAME: ${rancher_hostname}
+    RANCHER_SCHEME: https
+    SQS_URL: ${shudder_sqs_url}
+    CREDENTIALS_FILE: s3://${config_bucket}/credentials
+    TOKEN_FILE: s3://${config_bucket}/${environment_name}.token
+    ENVIRONMENT_NAME: ${environment_name}
+    ENVIRONMENT_TYPE: ${environment_type}
+    TERMINATOR_PORT: 2489
+    HEALTHCHECK_PORT: 2490
+    SLACK_WEBHOOK_URL: ${slack_webhook}
+    SLACK_USERNAME: Rancher
+    SLACK_ICON: cow
+  services:
+    docker-monitor:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ "docker-monitor" ]
+      restart: on-failure
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=docker,console
+        - io.rancher.os.detach=false
+      volumes:
+        - /var/run:/var/run
+        - /usr/bin/system-docker:/usr/bin/system-docker
+        - /usr/bin/docker:/usr/bin/docker
+    tag-sync:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ "tag-sync" ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - TAG_*
+    serf:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ "serf-bootstrap" ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=tag,console
+      environment:
+        - TAG_*
+        - ELB_NAME
+      volumes:
+        - /etc/serf:/etc/serf
+        - /var/run/system-docker.sock:/var/run/system-docker.sock
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    shudder:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ 'shudder' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - SLACK_*
+        - SQS_URL
+        - TERMINATOR_PORT
+        - TAG_DEPLOYMENT_ID
+    terminator:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ 'terminator-bootstrap' ]
+      restart: on-failure
+      net: host
+      tty: true
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - SLACK_*
+        - RANCHER_*
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+        - TERMINATOR_PORT
+        - ELB_NAME
+      volumes:
+        - /var/run:/var/run
+        - /usr/bin/system-docker:/usr/bin/system-docker
+    healthcheck:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ 'healthcheck-bootstrap' ]
+      restart: on-failure
+      net: host
+      tty: true
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - SLACK_*
+        - RANCHER_*
+        - ENVIRONMENT_*
+        - HEALTHCHECK_PORT
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+    fleet-monitor:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ 'fleet-monitor' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
+      environment:
+        - SLACK_*
+    register:
+      image: finboxio/rancher-aws-host:${version}
+      entrypoint: [ 'rancher-bootstrap' ]
+      restart: on-failure
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=tag,console
+      environment:
+        - TAG_*
+        - SLACK_*
+        - RANCHER_*
+        - CREDENTIALS_FILE
+        - TOKEN_FILE
+        - ENVIRONMENT_*
+      volumes:
+        - /var/run:/var/run
+        - /usr/bin/system-docker:/usr/bin/system-docker
+        - /usr/bin/docker:/usr/bin/docker
+        - /var/lib/rancher:/var/lib/rancher
