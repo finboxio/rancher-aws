@@ -1,4 +1,12 @@
 
+0.4.0 / 2016-08-11
+==================
+
+  * stacks on stacks of changes
+  * do not terminate spot instances on fleet cancellation
+  * add asg/fleet tags to serf members
+  * remove all-* checks files for out-of-service nodes
+
 0.3.3 / 2016-08-08
 ==================
 
