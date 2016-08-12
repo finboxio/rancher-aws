@@ -1,4 +1,11 @@
 
+0.4.1 / 2016-08-12
+==================
+
+  * drop ssl from mongo loadbalancer
+  * add mongo and convoy images to makefile
+  * leave curl in mongo image
+
 0.4.0 / 2016-08-11
 ==================
 
