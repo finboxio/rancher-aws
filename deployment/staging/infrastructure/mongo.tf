@@ -30,8 +30,8 @@ resource "aws_elb" "rancher-mongo-elb" {
     instance_port      = 32810
     instance_protocol  = "tcp"
     lb_port            = 32810
-    lb_protocol        = "ssl"
-    ssl_certificate_id = "${var.certificate_id}"
+    lb_protocol        = "tcp"
+    # ssl_certificate_id = "${var.certificate_id}"
   }
 
   health_check {
