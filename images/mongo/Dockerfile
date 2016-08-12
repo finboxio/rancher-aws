@@ -11,7 +11,7 @@ RUN apk add --no-cache curl bash jq \
     && tar -xzf convoy.tar.gz \
     && cp convoy/convoy convoy/convoy-pdata_tools /usr/bin/ \
     && rm -rf convoy.tar.gz convoy \
-    && apk del curl py-pip
+    && apk del py-pip
 
 RUN mkdir -p /etc/mongo
 
