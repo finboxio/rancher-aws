@@ -50,6 +50,20 @@ image.host:
 		&& docker push $(DOCKERHUB_USER)/rancher-aws-host:$(BUILD_VERSION)-latest \
 		&& docker push $(DOCKERHUB_USER)/rancher-aws-host:latest
 
+image.mongo:
+	@cd images/mongo \
+		&& docker build -t $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/mongo-convoy:latest . \
+		&& docker push $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION) \
+		&& docker push $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION)-latest \
+		&& docker push $(DOCKERHUB_USER)/mongo-convoy:latest
+
+image.convoy:
+	@cd images/convoy \
+		&& docker build -t $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/convoy-ebs:latest . \
+		&& docker push $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION) \
+		&& docker push $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION)-latest \
+		&& docker push $(DOCKERHUB_USER)/convoy-ebs:latest
+
 amis: ami.server ami.host
 
 ami.server: packer_cache image.server
