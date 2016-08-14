@@ -198,6 +198,10 @@ frontend live_check
   # END backend-acls
   ####################
 
+  {{ if .fallback_url }}
+  default_backend fallback
+  {{ end }}
+
   {{- end }}
 
   ############################
@@ -248,4 +252,10 @@ backend {{ $backend.id }}
   server {{ $container.ip }} {{ $container.ip }}:{{ $port }} {{ if not $container.healthy }} disabled {{ end }}
   {{- end }}
 
+{{ end }}
+
+{{ if .fallback_url }}
+backend fallback
+  mode http
+  redirect location {{ .fallback_url }} code 303
 {{ end }}

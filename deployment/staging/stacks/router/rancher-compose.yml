@@ -8,15 +8,27 @@ haproxy:
     healthy_threshold: 2
     response_timeout: 2000
   metadata:
+    scope: service
     global:
       - maxconn 4096
       - debug
-    scope: service
+    defaults:
+      - errorloc303 500 https://facebook.com
+      - errorloc303 502 https://gmail.com
+      - errorloc303 503 https://google.com
+      - errorloc303 504 https://github.com
     domains:
       - https://staging.finbox.io
+    fallback_url:
+      - https://twitter.com
     health:
       port: 79
       path: /live-router
     stats:
       port: 9090
+    frontends:
+      80/http:
+        options:
+          - rspideny ^HTTP/1.1\ 500
+          - rspideny ^HTTP/1.1\ 503
 
