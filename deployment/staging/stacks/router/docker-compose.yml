@@ -2,6 +2,9 @@ haproxy:
   image: finboxio/rancher-router
   entrypoint: [ router-bootstrap ]
   privileged: true
+  environment:
+    FALLBACK_URL: https://maintenance.finbox-staging.com/lost
+    ERROR_URL: https://maintenance.finbox-staging.com/status
   ports:
     - 79:79
     - 80:80

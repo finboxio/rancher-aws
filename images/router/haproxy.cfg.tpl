@@ -9,6 +9,10 @@ defaults
   timeout connect 5000
   timeout client  50000
   timeout server  50000
+  errorfile 500 /etc/router/500.http
+  errorfile 502 /etc/router/502.http
+  errorfile 503 /etc/router/503.http
+  errorfile 504 /etc/router/504.http
   {{- range .defaults }}
   {{ . }}
   {{- end }}
@@ -198,9 +202,7 @@ frontend live_check
   # END backend-acls
   ####################
 
-  {{ if .fallback_url }}
   default_backend fallback
-  {{ end }}
 
   {{- end }}
 
@@ -254,8 +256,6 @@ backend {{ $backend.id }}
 
 {{ end }}
 
-{{ if .fallback_url }}
 backend fallback
   mode http
-  redirect location {{ .fallback_url }} code 303
-{{ end }}
+  errorfile 503 /etc/router/404.http
