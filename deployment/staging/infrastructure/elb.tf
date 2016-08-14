@@ -27,6 +27,13 @@ resource "aws_security_group" "rancher-host-sg" {
   description = "Allow traffic to ports used by rancher hosts"
 
   ingress {
+    from_port = 79
+    to_port = 79
+    protocol = "TCP"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  ingress {
     from_port = 80
     to_port = 80
     protocol = "TCP"
@@ -36,6 +43,13 @@ resource "aws_security_group" "rancher-host-sg" {
   ingress {
     from_port = 443
     to_port = 443
+    protocol = "TCP"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  ingress {
+    from_port = 32810
+    to_port = 32810
     protocol = "TCP"
     cidr_blocks = [ "0.0.0.0/0" ]
   }
@@ -58,6 +72,13 @@ resource "aws_elb" "rancher-elb" {
   }
 
   listener {
+    instance_port     = 32810
+    instance_protocol = "tcp"
+    lb_port           = 32810
+    lb_protocol       = "tcp"
+  }
+
+  listener {
     instance_port      = 80
     instance_protocol  = "tcp"
     lb_port            = 443
@@ -69,7 +90,7 @@ resource "aws_elb" "rancher-elb" {
     healthy_threshold   = 2
     unhealthy_threshold = 2
     timeout             = 3
-    target              = "TCP:80"
+    target              = "HTTP:79/live-router"
     interval            = 30
   }
 
@@ -81,4 +102,9 @@ resource "aws_elb" "rancher-elb" {
   tags {
     Name = "rancher-finboxio-staging-elb"
   }
+}
+
+resource "aws_proxy_protocol_policy" "proxy-protocol" {
+  load_balancer = "${aws_elb.rancher-elb.name}"
+  instance_ports = [ "80" ]
 }
