@@ -30,15 +30,11 @@ do
   test "$line" = $'\r' && break
 done
 
-if [[ ! -e ./credentials ]]; then
-  aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true
-  if [[ -e ./credentials ]]; then source ./credentials; fi
-fi
+if [[ ! -e ./credentials ]]; then aws s3 cp ${CREDENTIALS_FILE} credentials &> /dev/null || true; fi
+if [[ -e ./credentials ]]; then source ./credentials; fi
 
-if [[ ! -e ./token ]]; then
-  aws s3 cp ${TOKEN_FILE} token &> /dev/null || true
-  if [[ -e ./token ]]; then source ./token; fi
-fi
+if [[ ! -e ./token ]]; then aws s3 cp ${TOKEN_FILE} token &> /dev/null || true; fi
+if [[ -e ./token ]]; then source ./token; fi
 
 if [[ "$RANCHER_ACCESS_KEY" == "" || "$RANCHER_SECRET_KEY" == "" || "${RANCHER_ENVIRONMENT_ID}" == "" ]]; then
   error

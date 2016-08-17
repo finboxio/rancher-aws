@@ -10,6 +10,7 @@ if [[ "$id" == "" || "$region" == "" ]]; then
 fi
 
 CHECK_INTERVAL=${CHECK_INTERVAL:-60}
+CHECK_RETENTION_HOURS=${CHECK_RETENTION_HOURS:-3}
 deployment=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
 bucket=${STATUS_BUCKET:?"STATUS_BUCKET must be set"}
 prefix="checks"
@@ -54,7 +55,7 @@ while true; do
   all=$(cat *$id*.json | jq -s '.[][]' | jq -s .)
 
   # Remove expired checks
-  oldest=$(date --date='3 days ago' +%s%N)
+  oldest=$(date --date="${CHECK_RETENTION_HOURS} hours ago" +%s%N)
   all=$(echo $all \
     | jq ".[] | select((.timestamp | tostring) > \"$oldest\")" \
     | jq -s .)
@@ -82,7 +83,7 @@ $checkers" | sort | uniq)
 
   # terminate instances with > 50% failures (at least 3 checks) in last 5 minutes
   for node in $nodes; do
-    oldest=$(date --date='5 minutes ago' +%s%N)
+    oldest=$(date --date='330 seconds ago' +%s%N)
 
     healthy=$(cat all-$id.json \
       | jq ".[] \
