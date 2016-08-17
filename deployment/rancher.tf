@@ -72,6 +72,7 @@ module "staging" {
 
   deployment_id = "${module.server.deployment_id}"
   rancher_hostname = "${module.server.rancher_hostname}"
+  slack_webhook = "${var.slack_webhook}"
   name = "Staging"
   version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
@@ -80,6 +81,7 @@ module "staging" {
   ssh_keypair = "${var.ssh_keypair}"
   zone_id = "${var.zone_id}"
   certificate_id = "${var.staging_certificate_id}"
+  cloudfront_certificate_id = "${var.staging_cloudfront_certificate_id}"
 
   cluster_size = "${var.staging_default_nodes}"
   availability_zones = "${var.staging_default_availability_zones}"
@@ -94,4 +96,37 @@ module "staging" {
 
   analyst_cluster_size = "${var.staging_analyst_nodes}"
   analyst_spot_pools = "${var.staging_analyst_spot_pools}"
+}
+
+module "production" {
+  source = "./production/infrastructure"
+
+  deployment_id = "${module.server.deployment_id}"
+  rancher_hostname = "${module.server.rancher_hostname}"
+  slack_webhook = "${var.slack_webhook}"
+  name = "Production"
+  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
+  ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
+
+  region = "${var.region}"
+  ssh_keypair = "${var.ssh_keypair}"
+  zone_id = "${var.zone_id}"
+  certificate_id = "${var.production_certificate_id}"
+  cloudfront_certificate_id = "${var.production_cloudfront_certificate_id}"
+
+  cluster_size = "${var.production_default_nodes}"
+  availability_zones = "${var.production_default_availability_zones}"
+  spot_price = "${var.production_default_spot_price}"
+  spot_pools = "${var.production_default_spot_pools}"
+  spot_allocation = "${var.production_default_spot_allocation}"
+
+  shudder_sqs_url = "${module.server.shudder_sqs_url}"
+  config_bucket = "${module.server.config_bucket}"
+  server_security_group = "${module.server.internal_security_group}"
+
+  mongo1_spot_pools = "${var.production_mongo1_spot_pools}"
+  mongo2_spot_pools = "${var.production_mongo2_spot_pools}"
+
+  analyst_cluster_size = "${var.production_analyst_nodes}"
+  analyst_spot_pools = "${var.production_analyst_spot_pools}"
 }
