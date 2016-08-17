@@ -1,4 +1,22 @@
 
+0.5.0 / 2016-08-17
+==================
+
+  * add production infrastructure
+  * add maintenance/404 page to staging and dns failover
+  * fix healthcheck credentials file placement
+  * remove volume config if not mounted
+  * fix mysql backup for passwords with unusual characters
+  * use rancher hostname for backup id instead of deployment tag
+  * temporary fix for fleet subnet spec in us-west-2. use rancher hostname for backup id instead of deployment tag
+  * add mongo mms, mongo backup, and job to enforce primary status
+  * remove stacks from repo
+  * improve router error handling with proper status codes and environment-variable redirects
+  * add die image for testing handling of error codes returned from backends
+  * restore fallback url for requests with no recognized backends (handle differently from known backends with 0 servers so we can do 'not found' vs 'maintenance')
+  * remove mongo elb and route through default instead
+  * add active haproxy router
+
 0.4.1 / 2016-08-12
 ==================
 
