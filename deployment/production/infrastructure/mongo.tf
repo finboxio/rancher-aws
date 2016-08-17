@@ -20,7 +20,7 @@ module "mongo1" {
 
   cluster_size = "1"
   spot_allocation = "lowestPrice"
-  spot_price = ".2"
+  spot_price = 0.2
   ssh_keypair = "${var.ssh_keypair}"
   shudder_sqs_url = "${var.shudder_sqs_url}"
   config_bucket = "${var.config_bucket}"
@@ -45,7 +45,7 @@ module "mongo2" {
 
   cluster_size = "1"
   spot_allocation = "lowestPrice"
-  spot_price = ".2"
+  spot_price = 0.2
   ssh_keypair = "${var.ssh_keypair}"
   shudder_sqs_url = "${var.shudder_sqs_url}"
   config_bucket = "${var.config_bucket}"
