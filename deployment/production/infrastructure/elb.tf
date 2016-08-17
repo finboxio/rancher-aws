@@ -1,36 +1,36 @@
-resource "aws_route53_record" "rancher-dns" {
-  zone_id = "${var.zone_id}"
-  name    = "production.finbox.io"
-  type    = "A"
+# resource "aws_route53_record" "rancher-dns" {
+#   zone_id = "${var.zone_id}"
+#   name    = "production.finbox.io"
+#   type    = "A"
 
-  set_identifier = "finboxio-production-dns"
-  failover_routing_policy {
-    type = "PRIMARY"
-  }
+#   set_identifier = "finboxio-production-dns"
+#   failover_routing_policy {
+#     type = "PRIMARY"
+#   }
 
-  alias {
-    name                   = "${aws_elb.rancher-elb.dns_name}"
-    zone_id                = "${aws_elb.rancher-elb.zone_id}"
-    evaluate_target_health = true
-  }
-}
+#   alias {
+#     name                   = "${aws_elb.rancher-elb.dns_name}"
+#     zone_id                = "${aws_elb.rancher-elb.zone_id}"
+#     evaluate_target_health = true
+#   }
+# }
 
-resource "aws_route53_record" "rancher-wildcard-dns" {
-  zone_id = "${var.zone_id}"
-  name    = "*.production.finbox.io"
-  type    = "A"
+# resource "aws_route53_record" "rancher-wildcard-dns" {
+#   zone_id = "${var.zone_id}"
+#   name    = "*.production.finbox.io"
+#   type    = "A"
 
-  set_identifier = "finboxio-production-wildcard-dns"
-  failover_routing_policy {
-    type = "PRIMARY"
-  }
+#   set_identifier = "finboxio-production-wildcard-dns"
+#   failover_routing_policy {
+#     type = "PRIMARY"
+#   }
 
-  alias {
-    name                   = "${aws_elb.rancher-elb.dns_name}"
-    zone_id                = "${aws_elb.rancher-elb.zone_id}"
-    evaluate_target_health = true
-  }
-}
+#   alias {
+#     name                   = "${aws_elb.rancher-elb.dns_name}"
+#     zone_id                = "${aws_elb.rancher-elb.zone_id}"
+#     evaluate_target_health = true
+#   }
+# }
 
 resource "aws_security_group" "rancher-host-sg" {
   name = "rancher-finboxio-production-host-sg"
