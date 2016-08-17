@@ -3,6 +3,11 @@ resource "aws_route53_record" "rancher-dns" {
   name    = "staging.finbox.io"
   type    = "A"
 
+  set_identifier = "finboxio-staging-dns"
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
+
   alias {
     name                   = "${aws_elb.rancher-elb.dns_name}"
     zone_id                = "${aws_elb.rancher-elb.zone_id}"
@@ -14,6 +19,11 @@ resource "aws_route53_record" "rancher-wildcard-dns" {
   zone_id = "${var.zone_id}"
   name    = "*.staging.finbox.io"
   type    = "A"
+
+  set_identifier = "finboxio-staging-wildcard-dns"
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
 
   alias {
     name                   = "${aws_elb.rancher-elb.dns_name}"

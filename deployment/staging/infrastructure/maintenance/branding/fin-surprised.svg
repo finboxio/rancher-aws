@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="80px" height="80px" viewBox="0 0 80 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+    <!-- Generator: Sketch 3.5.1 (25234) - http://www.bohemiancoding.com/sketch -->
+    <title>fin2</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
+        <g id="Artboard-1" sketch:type="MSArtboardGroup">
+            <g id="fin2" sketch:type="MSLayerGroup" transform="translate(1.000000, 1.000000)">
+                <g id="half_full" sketch:type="MSShapeGroup">
+                    <g id="Welcome">
+                        <g id="Company-View">
+                            <g id="half_full">
+                                <rect id="Rectangle-494" stroke="#3087FF" stroke-width="2" x="0" y="0" width="78" height="78.0715812"></rect>
+                                <g id="Oval-20" transform="translate(0.000000, 39.035791)" fill="#3087FF">
+                                    <g id="Mask" transform="translate(0.000000, 1.097222)">
+                                        <path d="M0,7.68055556 L0,37.9385684 L78,37.9385684 L78,7.68055556 C78,7.68055556 57.0928485,0.36229933 39,0.36229933 C20.9071516,0.36229933 0,7.68055556 0,7.68055556 Z M49.4812877,20.2310482 C50.7734342,20.5259033 50.731668,20.7649306 49.3902612,20.7649306 L28.9015905,20.7649306 C27.5591715,20.7649306 27.3353389,20.2390247 28.3699372,19.6095788 L30.7886691,18.1380307 C31.8374643,17.4999475 33.7874534,16.982679 35.1360013,16.982679 L32.797605,16.982679 C34.1497752,16.982679 36.2827664,17.2192757 37.5855638,17.5165613 L49.4812877,20.2310482 L49.4812877,20.2310482 Z" id="path-1"></path>
+                                    </g>
+                                </g>
+                                <ellipse id="Oval-21" stroke="#3087FF" stroke-width="1.8" fill="#3087FF" cx="21.06" cy="20.4309239" rx="5.46" ry="9.09279408"></ellipse>
+                                <ellipse id="Oval-21-Copy" stroke="#3087FF" stroke-width="1.8" fill="#3087FF" cx="56.94" cy="20.4309239" rx="5.46" ry="9.09279408"></ellipse>
+                            </g>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

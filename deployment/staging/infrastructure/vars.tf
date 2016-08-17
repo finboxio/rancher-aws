@@ -9,6 +9,7 @@ variable "rancher_hostname" {}
 variable "ssh_keypair" {}
 variable "zone_id" {}
 variable "certificate_id" {}
+variable "cloudfront_certificate_id" {}
 
 variable "region" {}
 variable "availability_zones" {}
