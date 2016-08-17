@@ -24,8 +24,8 @@ fi
 
 cat <<EOF > /tmp/prefreeze
 #! /bin/bash
-uuid=\$(mysql -u root -p${MYSQL_ROOT_PASSWORD} --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_local_state_uuid';")
-seqno=\$(mysql -u root -p${MYSQL_ROOT_PASSWORD} --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_last_committed';")
+uuid=\$(mysql -u root -p"${MYSQL_ROOT_PASSWORD}" --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_local_state_uuid';")
+seqno=\$(mysql -u root -p"${MYSQL_ROOT_PASSWORD}" --protocol tcp -sse "select VARIABLE_VALUE from information_schema.GLOBAL_STATUS where VARIABLE_NAME='wsrep_last_committed';")
 cp ${MYSQL_DATA_DIR}/grastate.dat /tmp/grastate.dat.bak
 mv ${MYSQL_DATA_DIR}/gvwstate.dat /tmp/gvwstate.dat.bak
 mv ${MYSQL_DATA_DIR}/ip-${IP}.pid /tmp/ip-${IP}.pid
