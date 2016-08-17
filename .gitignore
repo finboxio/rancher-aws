@@ -3,3 +3,4 @@
 *.tfstate.backup
 *.tfvars
 vars_override.tf
+stacks
