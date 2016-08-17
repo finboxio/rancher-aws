@@ -27,12 +27,12 @@ resource "aws_iam_policy" "rancher-fleet-iam-policy" {
   "Statement": [{
     "Effect": "Allow",
     "Action": [
-       "ec2:DescribeImages",
-       "ec2:DescribeSubnets",
-       "ec2:RequestSpotInstances",
-       "ec2:TerminateInstances",
-       "iam:PassRole"
-        ],
+      "ec2:DescribeImages",
+      "ec2:DescribeSubnets",
+      "ec2:RequestSpotInstances",
+      "ec2:TerminateInstances",
+      "iam:PassRole"
+    ],
     "Resource": ["*"]
   }]
 }

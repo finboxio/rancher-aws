@@ -8,7 +8,7 @@ write_files:
       0 */4 * * * sudo system-docker run --rm --net host \
         -v /var/run/system-docker.sock:/var/run/system-docker.sock \
         -v /usr/bin/system-docker:/usr/bin/system-docker \
-        -e TAG_DEPLOYMENT_ID=${deployment_id} \
+        -e RANCHER_HOSTNAME=${rancher_hostname} \
         -e SLACK_WEBHOOK_URL=${slack_webhook} \
         -e SLACK_USERNAME=Rancher \
         -e SLACK_ICON=cow \
