@@ -57,6 +57,13 @@ image.mongo:
 		&& docker push $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION)-latest \
 		&& docker push $(DOCKERHUB_USER)/mongo-convoy:latest
 
+image.mms:
+	@cd images/mms \
+		&& docker build -t $(DOCKERHUB_USER)/mms:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/mms:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/mms:latest . \
+		&& docker push $(DOCKERHUB_USER)/mms:$(BUILD_VERSION) \
+		&& docker push $(DOCKERHUB_USER)/mms:$(BUILD_VERSION)-latest \
+		&& docker push $(DOCKERHUB_USER)/mms:latest
+
 image.convoy:
 	@cd images/convoy \
 		&& docker build -t $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/convoy-ebs:latest . \

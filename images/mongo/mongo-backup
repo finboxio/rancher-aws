@@ -1,0 +1,97 @@
+#! /bin/bash
+
+MONGO_USER=${MONGO_USER:?"MONGO_USER must be set"}
+MONGO_PASSWORD=${MONGO_PASSWORD:?"MONGO_PASSWORD must be set"}
+MONGO_HOST=${MONGO_HOST:?"MONGO_HOST must be set"}
+MONGO_PORT=${MONGO_PORT:-27017}
+VOLUME_NAME=${VOLUME_NAME:?"VOLUME_NAME must be set"}
+BACKUP_NAME=${BACKUP_NAME:?"BACKUP_NAME must be set"}
+BACKUP_MAX_DAYS=${BACKUP_MAX_DAYS:-7}
+BACKUP_MIN_COUNT=${BACKUP_MIN_COUNT:-3}
+MOUNT_POINT=${MOUNT_POINT:?"MOUNT_POINT must be set"}
+
+REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
+
+primary=$(mongo $MONGO_HOST/admin --eval "rs.isMaster().primary" | tail -n +3)
+if [[ "$primary" == "$MONGO_HOST:$MONGO_PORT" ]]; then
+  echo "refusing to backup primary instance."
+  sleep 30
+  exit 1
+fi
+
+VOLUME_ID=$(convoy inspect $VOLUME_NAME | jq -r .DriverInfo.EBSVolumeID)
+
+if [[ "$VOLUME_ID" == "" ]]; then
+  echo "Cannot identify volume id to backup"
+  sleep 30
+  exit 1
+fi
+
+## Lock database
+mongo ${MONGO_HOST}:${MONGO_PORT}/admin -u ${MONGO_USER} -p${MONGO_PASSWORD} --eval 'db.fsyncLock()'
+fsfreeze -f ${MOUNT_POINT}
+
+## Create snapshots
+snapshot=$(convoy snapshot create $VOLUME_NAME)
+
+## Unlock database
+fsfreeze -u ${MOUNT_POINT}
+mongo ${MONGO_HOST}:${MONGO_PORT}/admin -u ${MONGO_USER} -p${MONGO_PASSWORD} --eval "db.fsyncUnlock()"
+
+## Wait for snapshot to complete
+SNAPSHOT_ID=$(convoy snapshot inspect $snapshot | jq -r .DriverInfo.EBSSnapshotID)
+backup=$(convoy backup create $snapshot)
+aws ec2 create-tags --region $REGION --resources $SNAPSHOT_ID --tags "Key=Name,Value=$BACKUP_NAME"
+
+## Verify backup
+convoy create backup-verify --backup $backup
+mkdir -p /convoy/backup
+convoy mount --mountpoint /convoy/backup backup-verify
+mongod --port 48240 --dbpath /convoy/backup/db --auth &
+pid=$!
+
+sleep 10
+cat <<EOF > /tmp/validate.js
+  dbs = db.getMongo().getDBNames()
+  valid = true
+  for (var i in dbs) {
+    db = db.getMongo().getDB(dbs[i])
+    collections = db.getCollectionNames()
+    for (var j in collections) {
+      valid = db.getCollection(collections[j]).validate().valid
+      if (!valid) {
+        print(dbs[i] + "." + collections[j] + " is not valid!")
+        break
+      } else {
+        print(dbs[i] + "." + collections[j] + " is valid")
+      }
+    }
+    if (!valid) break
+  }
+  print(valid)
+EOF
+
+BACKUP_MAX_AGE=$(date -d "-${BACKUP_MAX_DAYS}day" +%s)
+mongo localhost:48240/admin -u ${MONGO_USER} -p${MONGO_PASSWORD} /tmp/validate.js | tee -a /tmp/valid
+INVALID=$(grep "is not valid" /tmp/valid)
+if [[ "$INVALID" != "" ]]; then
+  echo ":thumbsdown: MongoDB backup $BACKUP_NAME failed: $INVALID" | slack -p -a 'danger'
+  aws ec2 delete-snapshot --region $REGION --snapshot-id $SNAPSHOT_ID
+else
+  ## Clean up old snapshots
+  aws ec2 describe-snapshots --region $REGION --filter "Name=volume-id,Values=$VOLUME_ID" \
+    | jq -r ".Snapshots | sort_by(.StartTime) | reverse \
+    | .[$BACKUP_MIN_COUNT:][] \
+    | select((.StartTime | sub(\"[.][0-9][0-9][0-9]Z\"; \"Z\") | fromdate) < $BACKUP_MAX_AGE) \
+    | .SnapshotId" \
+    | xargs aws ec2 delete-snapshot --region $REGION --snapshot-id
+
+  aws ec2 create-tags --region $REGION --resources $SNAPSHOT_ID --tags "Key=Verified,Value=true"
+
+  echo ":thumbsup: MongoDB backup $BACKUP_NAME succeeded" | slack -p -a 'good'
+fi
+
+kill -9 $pid
+
+convoy umount backup-verify
+convoy delete backup-verify
