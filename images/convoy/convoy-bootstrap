@@ -14,9 +14,12 @@ rm /var/run/convoy/convoy.sock
 rm /var/lib/rancher/convoy/convoy.cfg
 umount ${MOUNT_POINT}
 if [[ -e /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json ]]; then
-  cat /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json \
-    | jq '.MountPoint = ""' \
-    > /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json
+  mounted=$(cat /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json | jq '.MountPoint = ""')
+  if [[ "$mounted" != "" ]]; then
+    echo "$mounted" > /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json
+  else
+    rm /var/lib/rancher/convoy/ebs/ebs_volume_${VOLUME_NAME}.json
+  fi
 fi
 
 exec convoy daemon --drivers ebs
