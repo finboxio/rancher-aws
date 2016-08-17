@@ -1,4 +1,10 @@
 
+0.5.1 / 2016-08-17
+==================
+
+  * fix healthchecks
+  * remove production dns records
+
 0.5.0 / 2016-08-17
 ==================
 
