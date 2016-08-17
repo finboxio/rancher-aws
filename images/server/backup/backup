@@ -1,6 +1,6 @@
 #! /bin/bash
 
-TAG_DEPLOYMENT_ID=${TAG_DEPLOYMENT_ID:?"TAG_DEPLOYMENT_ID must be set"}
+RANCHER_HOSTNAME=${RANCHER_HOSTNAME:?"RANCHER_HOSTNAME must be set"}
 
 MYSQL_CONTAINER=${MYSQL_CONTAINER:-mysql}
 ETCD_PORT=${ETCD_PORT:-2379}
@@ -46,7 +46,7 @@ fi
 
 snapshots=$(aws ec2 describe-snapshots \
   --region $region \
-  --filters Name=tag:rancher-cluster-id,Values=${TAG_DEPLOYMENT_ID})
+  --filters Name=tag:rancher-cluster-id,Values=${RANCHER_HOSTNAME})
 
 echo "$snapshots" \
   | jq -r ".Snapshots \
