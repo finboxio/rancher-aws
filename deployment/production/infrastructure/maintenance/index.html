@@ -46,81 +46,77 @@
       return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
-    var requested = getParameterByName('href') || window.location.href;
+    var requested = getParameterByName('href');
+    if (requested && window.location.hash === '#retry') {
+      window.location = requested
+    } else {
+      window.location.hash = 'retry'
+      Smooch.init({
+        appToken: '5ej1e29vtiftx5or7y0ukcoi6',
+        properties: {
+          'page': window.location.href,
+          'requested': requested,
+          'mode': 'maintenance'
+        },
+        customText: {
+          headerText: 'Find Out When We\'re Back',
+          inputPlaceholder: 'How should we contact you?',
+          sendButtonText: 'Send',
+          introductionText: 'We apologize for the inconvenience.<br/><br/> If you let us know how to reach you, we\'ll make sure you know as soon as we\'re back online!',
+          settingsText: 'Please leave us your name and email so that we can get back to you.'
+        }
+      })
 
-    // Re-request the original page on refresh
-    window.onbeforeunload = function() {
-      window.setTimeout(function () {
-        if (requested) window.location.href = requested;
-      }, 0);
-      window.onbeforeunload = null; // necessary to prevent infinite loop, that kills your browser
-    }
-
-    Smooch.init({
-      appToken: '5ej1e29vtiftx5or7y0ukcoi6',
-      properties: {
-        'page': window.location.href,
-        'requested': requested,
-        'mode': 'maintenance'
-      },
-      customText: {
-        headerText: 'Find Out When We\'re Back',
-        inputPlaceholder: 'How should we contact you?',
-        sendButtonText: 'Send',
-        introductionText: 'We apologize for the inconvenience.<br/><br/> If you let us know how to reach you, we\'ll make sure you know as soon as we\'re back online!',
-        settingsText: 'Please leave us your name and email so that we can get back to you.'
+      var prompted = false
+      var prompt = function () {
+        var smooch = document.getElementById('sk-container')
+        if (smooch && !prompted) {
+          smooch.className = "sk-tab-display sk-appear sk-animation"
+          prompted = true
+        }
       }
-    })
 
-    var prompted = false
-    var prompt = function () {
-      var smooch = document.getElementById('sk-container')
-      if (smooch && !prompted) {
-        smooch.className = "sk-tab-display sk-appear sk-animation"
-        prompted = true
-      }
-    }
-
-    var animate = function () {
-      setTimeout(function () {
-        var fin = document.getElementById('fin')
-        fin.className = "fin animated wobble"
+      var animate = function () {
         setTimeout(function () {
-          fin.className = "fin animated hinge"
-          setTimeout(prompt, 1000)
+          var fin = document.getElementById('fin')
+          fin.className = "fin animated wobble"
           setTimeout(function () {
-            fin.style["background-image"] = "url('/branding/fin-happy.png')"
-            fin.className = "fin animated bounceInUp"
+            fin.className = "fin animated hinge"
+            setTimeout(prompt, 1000)
             setTimeout(function () {
-              fin.className = "fin animated tada"
+              fin.style["background-image"] = "url('/branding/fin-happy.png')"
+              fin.className = "fin animated bounceInUp"
               setTimeout(function () {
-                fin.className = "fin animated rotateOut"
+                fin.className = "fin animated tada"
                 setTimeout(function () {
-                  fin.style["background-image"] = "url('/branding/fin-surprised.png')"
-                  fin.className = "fin animated rotateIn"
-                  setTimeout(animate, 1000)
-                }, 300)
-              }, 10000)
-            }, 1000)
-          }, 3000)
+                  fin.className = "fin animated rotateOut"
+                  setTimeout(function () {
+                    fin.style["background-image"] = "url('/branding/fin-surprised.png')"
+                    fin.className = "fin animated rotateIn"
+                    setTimeout(animate, 1000)
+                  }, 300)
+                }, 10000)
+              }, 1000)
+            }, 3000)
+          }, 1000)
         }, 1000)
-      }, 1000)
-    }
-    animate()
+      }
+      animate()
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://hooks.slack.com/services/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');
-    xhr.send(JSON.stringify({
-      "fallback": "User is seeing the maintenance page",
-      "text": "User is seeing the maintenance page",
-      "color": "danger",
-      "channel": "#lr-priority",
-      "fields": [{
-        "title": "Requested URL",
-        "value": requested,
-        "short": false
-      }]
-    }));
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://hooks.slack.com/services/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');
+      xhr.send(JSON.stringify({
+        "fallback": "User is seeing the maintenance page",
+        "text": "User is seeing the maintenance page",
+        "color": "danger",
+        "channel": "#lr-staging",
+        "fields": [{
+          "title": "Requested URL",
+          "value": requested,
+          "short": false
+        }]
+      }));
+    }
   </script>
 </body>
 </html>
