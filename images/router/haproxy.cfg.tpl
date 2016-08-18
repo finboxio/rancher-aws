@@ -92,7 +92,7 @@ frontend live_check
   {{ if $root.scheme -}}
   acl acl_{{ $did }}_default_https {{ if eq $root.scheme "https" -}} always_true {{ else -}} always_false {{- end }}
   redirect scheme https code 301 if !is_proxy_https acl_{{ $did }}_default_https
-  {{- end }}
+  {{ end }}
   {{- end }}
 
   ####
@@ -167,23 +167,23 @@ frontend live_check
 
   {{ if $backend.scope }}
 
-  {{ if eq $backend.scope "environment" -}}
+  {{ if eq $backend.scope "environment" }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $backend.stack }}.{{ $backend.environment }}.{{ $root.host }}
-  {{- else if eq $backend.scope "service" -}}
+  {{ else if eq $backend.scope "service" }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $root.host }}
-  {{- else -}}
+  {{ else }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $backend.stack }}.{{ $root.host }}
-  {{- end }}
+  {{ end }}
 
   {{ else }}
 
-  {{ if eq $.scope "environment" -}}
+  {{ if eq $.scope "environment" }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $backend.stack }}.{{ $backend.environment }}.{{ $root.host }}
-  {{- else if eq $.scope "service" -}}
+  {{ else if eq $.scope "service" }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $root.host }}
-  {{- else -}}
+  {{ else }}
   acl acl_{{ $did }}_{{ $bid }}_default hdr(host) -i {{ $backend.service }}.{{ $backend.stack }}.{{ $root.host }}
-  {{- end }}
+  {{ end }}
 
   {{ end }}
 

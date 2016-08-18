@@ -38,7 +38,7 @@ for entry in $entries; do
     if [[ "$is_number" == 'true' && "$mode" != "" ]]; then
       echo "    mode: $mode" >> /etc/router/entries.yml
     fi
-  elif [[ "$key" == "domain" ]]; then
+  elif [[ "$key" == "domain" || "$key" == "domains" ]]; then
     if [[ "$current_domain" == "" ]]; then
       echo "    domains:" >> /etc/router/entries.yml
     fi
