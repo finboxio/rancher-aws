@@ -39,7 +39,7 @@ resource "aws_cloudfront_distribution" "rancher-production-maintenance-distribut
   comment = "Maintenance page for production.finbox.io"
   default_root_object = "no.file"
 
-  aliases = [ "*.production.finbox.io" ]
+  aliases = [ "finbox.io", "*.finbox.io", "*.production.finbox.io" ]
 
   default_cache_behavior {
     allowed_methods = [ "GET", "HEAD", "OPTIONS" ]
@@ -100,7 +100,7 @@ resource "aws_cloudfront_distribution" "rancher-production-404-distribution" {
   comment = "404 page for production.finbox.io"
   default_root_object = "no.file"
 
-  aliases = [ "null.production.finbox.io" ]
+  aliases = [ "null.finbox.io", "null.production.finbox.io" ]
 
   default_cache_behavior {
     allowed_methods = [ "GET", "HEAD", "OPTIONS" ]
@@ -166,6 +166,30 @@ resource "aws_route53_record" "rancher-production-maintenance-dns" {
 resource "aws_route53_record" "rancher-production-404-dns" {
   zone_id = "${var.zone_id}"
   name = "null.production.finbox.io"
+  type = "A"
+
+  alias {
+    name = "${aws_cloudfront_distribution.rancher-production-404-distribution.domain_name}"
+    zone_id = "${aws_cloudfront_distribution.rancher-production-404-distribution.hosted_zone_id}"
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "rancher-maintenance-dns" {
+  zone_id = "${var.zone_id}"
+  name = "maintenance.finbox.io"
+  type = "A"
+
+  alias {
+    name = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.domain_name}"
+    zone_id = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.hosted_zone_id}"
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "rancher-404-dns" {
+  zone_id = "${var.zone_id}"
+  name = "null.finbox.io"
   type = "A"
 
   alias {
