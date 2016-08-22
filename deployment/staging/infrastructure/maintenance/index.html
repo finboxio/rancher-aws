@@ -55,7 +55,7 @@
         appToken: '5ej1e29vtiftx5or7y0ukcoi6',
         properties: {
           'page': window.location.href,
-          'requested': requested,
+          'requested': requested || window.location.href,
           'mode': 'maintenance'
         },
         customText: {
@@ -112,7 +112,7 @@
         "channel": "#lr-staging",
         "fields": [{
           "title": "Requested URL",
-          "value": requested,
+          "value": requested || window.location.href,
           "short": false
         }]
       }));
