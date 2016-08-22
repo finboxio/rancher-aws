@@ -233,6 +233,40 @@ resource "aws_route53_record" "rancher-production-failover-wildcard-dns" {
   }
 }
 
+resource "aws_route53_record" "rancher-production-failover-root-dns" {
+  zone_id = "${var.zone_id}"
+  name    = "finbox.io"
+  type    = "A"
+
+  set_identifier = "secondary-finboxio-production-root-dns"
+  failover_routing_policy {
+    type = "SECONDARY"
+  }
+
+  alias {
+    name = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.domain_name}"
+    zone_id = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.hosted_zone_id}"
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "rancher-production-failover-root-wildcard-dns" {
+  zone_id = "${var.zone_id}"
+  name    = "*.finbox.io"
+  type    = "A"
+
+  set_identifier = "secondary-finboxio-production-root-wildcard-dns"
+  failover_routing_policy {
+    type = "SECONDARY"
+  }
+
+  alias {
+    name = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.domain_name}"
+    zone_id = "${aws_cloudfront_distribution.rancher-production-maintenance-distribution.hosted_zone_id}"
+    evaluate_target_health = false
+  }
+}
+
 resource "aws_s3_bucket_object" "013bcd6a3b2bbce663fab28c82d7f9f7c892cd9d" {
   bucket = "${aws_s3_bucket.rancher-production-maintenance-bucket.bucket}"
   content_type = "text/css"

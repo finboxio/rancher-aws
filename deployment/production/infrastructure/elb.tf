@@ -32,6 +32,40 @@ resource "aws_route53_record" "rancher-wildcard-dns" {
   }
 }
 
+resource "aws_route53_record" "rancher-root-dns" {
+  zone_id = "${var.zone_id}"
+  name    = "finbox.io"
+  type    = "A"
+
+  set_identifier = "finboxio-production-dns"
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
+
+  alias {
+    name                   = "${aws_elb.rancher-elb.dns_name}"
+    zone_id                = "${aws_elb.rancher-elb.zone_id}"
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "rancher-root-wildcard-dns" {
+  zone_id = "${var.zone_id}"
+  name    = "*.finbox.io"
+  type    = "A"
+
+  set_identifier = "finboxio-production-wildcard-dns"
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
+
+  alias {
+    name                   = "${aws_elb.rancher-elb.dns_name}"
+    zone_id                = "${aws_elb.rancher-elb.zone_id}"
+    evaluate_target_health = true
+  }
+}
+
 resource "aws_security_group" "rancher-host-sg" {
   name = "rancher-finboxio-production-host-sg"
   description = "Allow traffic to ports used by rancher hosts"
