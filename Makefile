@@ -50,13 +50,6 @@ image.host:
 		&& docker push $(DOCKERHUB_USER)/rancher-aws-host:$(BUILD_VERSION)-latest \
 		&& docker push $(DOCKERHUB_USER)/rancher-aws-host:latest
 
-image.mongo:
-	@cd images/mongo \
-		&& docker build -t $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/mongo-convoy:latest . \
-		&& docker push $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION) \
-		&& docker push $(DOCKERHUB_USER)/mongo-convoy:$(BUILD_VERSION)-latest \
-		&& docker push $(DOCKERHUB_USER)/mongo-convoy:latest
-
 image.mms:
 	@cd images/mms \
 		&& docker build -t $(DOCKERHUB_USER)/mms:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/mms:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/mms:latest . \
