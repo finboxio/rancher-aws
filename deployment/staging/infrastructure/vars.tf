@@ -27,3 +27,5 @@ variable "mongo_spot_pools" {}
 
 variable "analyst_cluster_size" {}
 variable "analyst_spot_pools" {}
+
+output "version" { value = "${var.version}" }
