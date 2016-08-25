@@ -93,7 +93,7 @@ module "production" {
   rancher_hostname = "${module.server.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
   name = "Production"
-  version = "${coalesce(var.production_version, var.version, "${data.atlas_artifact.rancher-aws-production-host.metadata_full.version}${replace(var.production_use_latest, var.use_latest, "/.+/", "-latest")}")}"
+  version = "${coalesce(var.production_version, var.version, "${data.atlas_artifact.rancher-aws-production-host.metadata_full.version}${replace(coalesce(var.production_use_latest, var.use_latest), "/.+/", "-latest")}")}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.region), var.region))}"
 
   region = "${var.region}"
