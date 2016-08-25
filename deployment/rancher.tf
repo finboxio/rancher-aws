@@ -1,33 +1,7 @@
-variable "rancher-amis" {
-  type = "map"
-  default = {
-    ap-northeast-1 = "ami-a452a2c5"
-    ap-northeast-2 = "ami-928e44fc"
-    ap-southeast-1 = "ami-529f4231"
-    ap-southeast-2 = "ami-fc577c9f"
-    eu-central-1 = "ami-4a7f9425"
-    eu-west-1 = "ami-997b1eea"
-    sa-east-1 = "ami-98198cf4"
-    us-east-1 = "ami-1071ca07"
-    us-west-1 = "ami-a57730c5"
-    us-west-2 = "ami-f0f03190"
-    ap-south-1 = "ami-de97fdb1"
-  }
-}
-
 data "atlas_artifact" "rancher-aws-server" {
   name = "finboxio/rancher-aws-server"
   type = "amazon.image"
-  version = "${replace(var.version, "latest", "")}"
-  metadata {
-    region = "${var.region}"
-  }
-}
-
-data "atlas_artifact" "rancher-aws-host" {
-  name = "finboxio/rancher-aws-host"
-  type = "amazon.image"
-  version = "${replace(var.version, "latest", "")}"
+  version = "${replace(coalesce(var.server_version, var.version), "latest", "")}"
   metadata {
     region = "${var.region}"
   }
@@ -37,7 +11,7 @@ module "server" {
   source = "../modules/server-fleet"
 
   deployment_id = "${var.deployment_id}"
-  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
+  version = "${coalesce(var.server_version, var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(coalesce(var.server_use_latest, var.use_latest), "/.+/", "-latest")}")}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region))}"
 
   region = "${var.region}"
@@ -63,8 +37,13 @@ module "server" {
   slack_webhook = "${var.slack_webhook}"
 }
 
-output "status_endpoint" {
-  value = "${module.server.status_endpoint}"
+data "atlas_artifact" "rancher-aws-staging-host" {
+  name = "finboxio/rancher-aws-host"
+  type = "amazon.image"
+  version = "${replace(coalesce(var.staging_version, var.version), "latest", "")}"
+  metadata {
+    region = "${var.region}"
+  }
 }
 
 module "staging" {
@@ -74,8 +53,8 @@ module "staging" {
   rancher_hostname = "${module.server.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
   name = "Staging"
-  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
-  ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
+  version = "${coalesce(var.staging_version, var.version, "${data.atlas_artifact.rancher-aws-staging-host.metadata_full.version}${replace(coalesce(var.staging_use_latest, var.use_latest), "/.+/", "-latest")}")}"
+  ami = "${element(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.region), var.region))}"
 
   region = "${var.region}"
   ssh_keypair = "${var.ssh_keypair}"
@@ -98,6 +77,15 @@ module "staging" {
   analyst_spot_pools = "${var.staging_analyst_spot_pools}"
 }
 
+data "atlas_artifact" "rancher-aws-production-host" {
+  name = "finboxio/rancher-aws-host"
+  type = "amazon.image"
+  version = "${replace(coalesce(var.production_version, var.version), "latest", "")}"
+  metadata {
+    region = "${var.region}"
+  }
+}
+
 module "production" {
   source = "./production/infrastructure"
 
@@ -105,8 +93,8 @@ module "production" {
   rancher_hostname = "${module.server.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
   name = "Production"
-  version = "${coalesce(var.version, "${data.atlas_artifact.rancher-aws-server.metadata_full.version}${replace(var.use_latest, "/.+/", "-latest")}")}"
-  ami = "${element(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-host.metadata_full.region), var.region))}"
+  version = "${coalesce(var.production_version, var.version, "${data.atlas_artifact.rancher-aws-production-host.metadata_full.version}${replace(var.production_use_latest, var.use_latest, "/.+/", "-latest")}")}"
+  ami = "${element(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.region), var.region))}"
 
   region = "${var.region}"
   ssh_keypair = "${var.ssh_keypair}"
