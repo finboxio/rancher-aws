@@ -101,11 +101,23 @@ cluster.plan:
 	  && terraform get \
 	  && terraform plan -state=.tfstate/terraform.tfstate
 
+cluster.plan.target:
+	@echo "Plan changes to terraform server infrastructure"
+	@cd deployment \
+	  && terraform get \
+	  && terraform plan -state=.tfstate/terraform.tfstate -target=${TARGET}
+
 cluster.apply:
 	@echo "Applying changes to terraform infrastructure"
 	@cd deployment \
 		&& terraform get \
 	  && terraform apply -state=.tfstate/terraform.tfstate
+
+cluster.apply.target:
+	@echo "Applying changes to terraform server infrastructure"
+	@cd deployment \
+		&& terraform get \
+	  && terraform apply -state=.tfstate/terraform.tfstate -target=${TARGET}
 
 cluster.destroy:
 	@echo "Destroying terraform infrastructure"
