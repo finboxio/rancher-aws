@@ -190,7 +190,8 @@ elif [[ "$CREATE_ENVIRONMENT" == "true" ]]; then
 fi
 
 RANCHER_HOST_LABELS=$labels$RANCHER_HOST_LABELS
-echo 'Registering host '${instance_id}' with labels '$RANCHER_HOST_LABELS | slack -p -a 'good'
+attachments=$(echo "$RANCHER_HOST_LABELS" | tr '&' '\n' | xargs -L1 echo '--short-field' | tr '\n' ' ' | tr '=' ' ')
+echo "Registering host ${instance_id}" | slack -p -a 'good' $attachments
 
 cmd=$(curl -sf -X GET \
   -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
