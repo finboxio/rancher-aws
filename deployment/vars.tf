@@ -1,12 +1,10 @@
 variable "deployment_id" {}
-variable "version" { default = "" }
-variable "use_latest" { default = "" }
+variable "ami_version" { default = "" }
+variable "image_version" { default = "" }
 
 variable "region" {}
 variable "ssh_keypair" {}
 variable "zone_id" {}
-variable "certificate_id" {}
-variable "cloudfront_certificate_id" {}
 
 variable "rancher_hostname" {}
 variable "mysql_root_password" {}
@@ -19,9 +17,12 @@ variable "rancher_admin_password" {}
 variable "slack_webhook" {}
 
 # Server Vars
+variable "certificate_id" {}
+variable "cloudfront_certificate_id" {}
+variable "server_ami_version" { default = "" }
+variable "server_image_version" { default = "" }
+
 variable "server_nodes" {}
-variable "server_version" { default = "" }
-variable "server_use_latest" { default = "" }
 variable "server_spot_price" {}
 variable "server_spot_allocation" {}
 variable "server_spot_pools" {}
@@ -30,8 +31,8 @@ variable "server_availability_zones" {}
 # Staging Vars
 variable "staging_certificate_id" {}
 variable "staging_cloudfront_certificate_id" {}
-variable "staging_version" { default = "" }
-variable "staging_use_latest" { default = "" }
+variable "staging_ami_version" { default = "" }
+variable "staging_image_version" { default = "" }
 
 variable "staging_default_nodes" {}
 variable "staging_default_availability_zones" {}
@@ -46,8 +47,8 @@ variable "staging_analyst_spot_pools" {}
 # Production Vars
 variable "production_certificate_id" {}
 variable "production_cloudfront_certificate_id" {}
-variable "production_version" { default = "" }
-variable "production_use_latest" { default = "" }
+variable "production_ami_version" { default = "" }
+variable "production_image_version" { default = "" }
 
 variable "production_default_nodes" {}
 variable "production_default_availability_zones" {}
