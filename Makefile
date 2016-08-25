@@ -64,13 +64,6 @@ image.convoy:
 		&& docker push $(DOCKERHUB_USER)/convoy-ebs:$(BUILD_VERSION)-latest \
 		&& docker push $(DOCKERHUB_USER)/convoy-ebs:latest
 
-image.router:
-	@cd images/router \
-		&& docker build -t $(DOCKERHUB_USER)/rancher-router:$(BUILD_VERSION) -t $(DOCKERHUB_USER)/rancher-router:$(BUILD_VERSION)-latest -t $(DOCKERHUB_USER)/rancher-router:latest . \
-		&& docker push $(DOCKERHUB_USER)/rancher-router:$(BUILD_VERSION) \
-		&& docker push $(DOCKERHUB_USER)/rancher-router:$(BUILD_VERSION)-latest \
-		&& docker push $(DOCKERHUB_USER)/rancher-router:latest
-
 amis: ami.server ami.host
 
 ami.server: packer_cache image.server
