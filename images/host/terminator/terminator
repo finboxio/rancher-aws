@@ -63,15 +63,18 @@ if [[ -e ./token ]]; then source ./token; fi
 
 if [[ "$RANCHER_ACCESS_KEY" != "" && "$RANCHER_SECRET_KEY" != "" ]]; then
 
-  host_id=$(curl -sf -X GET \
+  host_data=$(curl -sf -X GET \
       -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
       -H 'Accept: application/json' \
       "${RANCHER_SCHEME}://${RANCHER_HOSTNAME}/v1/hosts?name=${my_id}" \
-      | jq -r ".data[] | .id")
+      | jq -r ".data[]")
+
+  host_id=$(echo "$host_data" | jq -r .id)
+  host_labels=$(echo "$host_data" | jq -r '.labels | to_entries | map("--short-field " + .key + " " + .value) | .[]' | tr '\n' ' ')
 
   if [[ "$host_id" != "" ]]; then
     echo "Decommissioning rancher agent $host_id..." | \
-          slack -p -a "warning" &> /dev/null
+          slack -p -a "warning" $host_labels &> /dev/null
 
     state=$(curl -sf -u "${RANCHER_ACCESS_KEY}:${RANCHER_SECRET_KEY}" \
       -X POST \
