@@ -56,6 +56,10 @@ while true; do
         | select(.tags.fleet == "'$my_fleet'")
         | .name'))
 
+      # Wait at least another 10 minutes after fleet has been terminated
+      # to guarantee that any new instances have a shot at coming online first
+      sleep 600
+
       echo "Terminating instance $oldest because its spot fleet request has been cancelled" | slack -p -a 'warning'
       aws ec2 terminate-instances --region $region --instance-ids ${oldest[0]}
     fi
