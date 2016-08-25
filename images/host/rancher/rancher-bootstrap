@@ -39,7 +39,7 @@ region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/documen
 zone=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .availabilityZone)
 instance_type=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .instanceType)
 tags=$(aws ec2 describe-instances --region $region --instance-ids $instance_id | jq -r '.Reservations[0].Instances[0].Tags | map(.Key + "=" + .Value) | reduce .[] as $tag (""; . + $tag + "&")')
-labels="${tags}instance-type=${instance_type}&zone=${zone}&region=${region}&public-ip=${public}&private-ip=${self}&"
+labels="${tags}instance-type=${instance_type}&zone=${zone}&region=${region}&public-ip=${public}&private-ip=${self}&io.rancher.host.external_dns_ip=${public}"
 members=($(serf members -format json \
   | jq -r '.members
     | sort_by(.tags.up)
