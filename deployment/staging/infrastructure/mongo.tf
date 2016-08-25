@@ -1,6 +1,13 @@
 resource "aws_security_group" "rancher-staging-mongo-sg" {
   name = "rancher-finboxio-staging-mongo-host-sg"
 
+  ingress {
+    from_port = 32810
+    to_port = 32810
+    protocol = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port = 0
     to_port = 0
