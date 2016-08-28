@@ -12,7 +12,10 @@
     "version": null,
     "branch": null,
     "commit": null,
-    "repository": null
+    "repository": null,
+    "rancher_agent_image": null,
+    "rancher_agent_instance_image": null,
+    "agent_bootstrap_image": null
   },
   "builders": [
     {
@@ -62,9 +65,9 @@
       "type": "shell",
       "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
       "inline": [
-        "docker pull rancher/agent:v1.0.2",
-        "docker pull rancher/agent-instance:v0.8.3",
-        "system-docker pull {{ user `dockerhub` }}/rancher-aws-host:{{ user `version` }}"
+        "docker pull {{ user `rancher_agent_image` }}",
+        "docker pull {{ user `rancher_agent_instance_image` }}",
+        "system-docker pull {{ user `agent_bootstrap_image` }}"
       ]
     }
   ],
@@ -81,7 +84,10 @@
         "version": "{{ user `version` }}",
         "branch": "{{ user `branch` }}",
         "built_with": "packer",
-        "built_by": "{{ user `user` }}"
+        "built_by": "{{ user `user` }}",
+        "rancher_agent_image": "{{ user `rancher_agent_image` }}",
+        "rancher_agent_instance_image": "{{ user `rancher_agent_instance_image` }}",
+        "agent_bootstrap_image": "{{ user `agent_bootstrap_image` }}"
       }
     }
   ]

@@ -17,6 +17,13 @@ BUILD_VERSION := $(shell if [[ "$(GIT_BRANCH)" != "master" ]]; then echo $(GIT_B
 DEBUG ?= "false"
 DEBUG_FLAG := $(shell if [ "$(DEBUG)" == "true" ]; then echo "-debug"; fi)
 
+SERVER_BOOTSTRAP_IMAGE=$(DOCKERHUB_USER)/rancher-aws-server:$(BUILD_VERSION)
+AGENT_BOOTSTRAP_IMAGE=$(DOCKERHUB_USER)/rancher-aws-host:$(BUILD_VERSION)
+
+RANCHER_SERVER_IMAGE=rancher/server:v1.1.2
+RANCHER_AGENT_IMAGE=rancher/agent:v1.0.2
+RANCHER_AGENT_INSTANCE_IMAGE=rancher/agent-instance:v0.8.3
+
 packer_cache:
 	@mkdir ~/.packer_cache &> /dev/null || true
 
@@ -74,7 +81,9 @@ ami.server: packer_cache image.server
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.commit="${BUILD_COMMIT}" \
 		| .variables.repository="${GIT_REPO}" \
-		| .variables.dockerhub="${DOCKERHUB_USER}"' \
+		| .variables.dockerhub="${DOCKERHUB_USER}" \
+		| .variables.rancher_server_image="${RANCHER_SERVER_IMAGE}" \
+		| .variables.server_bootstrap_image="${SERVER_BOOTSTRAP_IMAGE}"' \
 		| packer build -force $(DEBUG_FLAG) -
 
 ami.host: packer_cache image.host
@@ -85,7 +94,10 @@ ami.host: packer_cache image.host
 		| .variables.branch="${GIT_BRANCH}" \
 		| .variables.commit="${BUILD_COMMIT}" \
 		| .variables.repository="${GIT_REPO}" \
-		| .variables.dockerhub="${DOCKERHUB_USER}"' \
+		| .variables.dockerhub="${DOCKERHUB_USER}" \
+		| .variables.rancher_agent_image="${RANCHER_AGENT_IMAGE}" \
+		| .variables.rancher_agent_instance_image="${RANCHER_AGENT_INSTANCE_IMAGE}" \
+		| .variables.agent_bootstrap_image="${AGENT_BOOTSTRAP_IMAGE}"' \
 		| packer build -force $(DEBUG_FLAG) -
 
 cluster.plan:

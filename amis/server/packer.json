@@ -12,7 +12,9 @@
     "version": null,
     "branch": null,
     "commit": null,
-    "repository": null
+    "repository": null,
+    "rancher_server_image": null,
+    "server_bootstrap_image": null
   },
   "builders": [
     {
@@ -62,8 +64,8 @@
       "type": "shell",
       "execute_command": "{{ .Vars }} sudo -E sh '{{ .Path }}'",
       "inline": [
-        "docker pull rancher/server:v1.1.2",
-        "system-docker pull {{ user `dockerhub` }}/rancher-aws-server:{{ user `version` }}"
+        "docker pull {{ user `rancher_server_image` }}",
+        "system-docker pull {{ user `server_bootstrap_image` }}"
       ]
     }
   ],
@@ -80,7 +82,9 @@
         "version": "{{ user `version` }}",
         "branch": "{{ user `branch` }}",
         "built_with": "packer",
-        "built_by": "{{ user `user` }}"
+        "built_by": "{{ user `user` }}",
+        "rancher_server_image": "{{ user `rancher_server_image` }}",
+        "server_bootstrap_image": "{{ user `server_bootstrap_image` }}"
       }
     }
   ]
