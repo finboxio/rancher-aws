@@ -55,9 +55,10 @@ rancher:
     RANCHER_MYSQL_USER: ${rancher_mysql_user}
     RANCHER_MYSQL_PASSWORD: ${rancher_mysql_password}
     RANCHER_MYSQL_DATABASE: ${rancher_mysql_database}
-    RANCHER_HOSTNAME: ${rancher_hostname}
     RANCHER_SCHEME: https
-    RANCHER_VERSION: v1.1.2
+    RANCHER_HOSTNAME: ${rancher_hostname}
+    RANCHER_SERVER_IMAGE: ${rancher_server}
+    RANCHER_AGENT_IMAGE: ${rancher_agent}
     MYSQLCHECK_PORT: 2488
     TERMINATOR_PORT: 2489
     HEALTHCHECK_PORT: 2490

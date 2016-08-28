@@ -17,5 +17,7 @@ data "template_file" "rancher-userdata-template" {
     shudder_sqs_url        = "${aws_sqs_queue.rancher-terminations.id}"
     elb_name               = "${aws_elb.rancher-elb.name}"
     version                = "${var.version}"
+    rancher_server         = "${var.rancher_server}"
+    rancher_agent          = "${var.rancher_agent}"
   }
 }

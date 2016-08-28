@@ -9,6 +9,8 @@ variable "cloudfront_certificate_id" {}
 
 variable "version" {}
 variable "rancher_hostname" {}
+variable "rancher_server" { default = "rancher/server:latest" }
+variable "rancher_agent" { default = "" }
 variable "mysql_root_password" {}
 variable "mysql_volume_size" {}
 variable "rancher_mysql_user" {}
