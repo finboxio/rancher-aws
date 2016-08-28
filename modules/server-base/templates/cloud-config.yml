@@ -40,8 +40,9 @@ rancher:
     CREDENTIALS_FILE: s3://${rancher_s3_bucket}/credentials
     SQS_URL: ${shudder_sqs_url}
     SLACK_WEBHOOK_URL: ${slack_webhook}
-    SLACK_USERNAME: Rancher
-    SLACK_ICON: cow
+    SLACK_CHANNEL: ${slack_channel}
+    SLACK_USERNAME: ${slack_username}
+    SLACK_ICON: ${slack_icon}
     MYSQL_ROOT_PASSWORD: ${mysql_root_password}
     MYSQL_HOST: localhost
     MYSQL_PORT: 3306

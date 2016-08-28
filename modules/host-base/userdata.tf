@@ -11,6 +11,9 @@ data "template_file" "rancher-userdata-template" {
     config_bucket          = "${var.config_bucket}"
     elb_name               = "${var.elb_name}"
     slack_webhook          = "${var.slack_webhook}"
+    slack_channel          = "${var.slack_channel}"
+    slack_username         = "${var.slack_username}"
+    slack_icon             = "${var.slack_icon}"
     version                = "${var.version}"
   }
 }

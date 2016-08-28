@@ -24,8 +24,9 @@ rancher:
     TERMINATOR_PORT: 2489
     HEALTHCHECK_PORT: 2490
     SLACK_WEBHOOK_URL: ${slack_webhook}
-    SLACK_USERNAME: Rancher
-    SLACK_ICON: cow
+    SLACK_CHANNEL: ${slack_channel}
+    SLACK_USERNAME: ${slack_username}
+    SLACK_ICON: ${slack_icon}
   services:
     docker-monitor:
       image: finboxio/rancher-aws-host:${version}
