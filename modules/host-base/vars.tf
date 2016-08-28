@@ -10,7 +10,7 @@ variable "server_security_group" {}
 variable "elb_name" { default = "" }
 
 variable "slack_webhook" {}
-variable "slack_channel" {}
-variable "slack_username" {}
-variable "slack_icon" {}
+variable "slack_channel" { default = "" }
+variable "slack_username" { default = "" }
+variable "slack_icon" { default = "" }
 variable "version" {}

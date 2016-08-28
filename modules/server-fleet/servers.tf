@@ -19,4 +19,7 @@ module "base" {
   rancher_admin_user = "${var.rancher_admin_user}"
   rancher_admin_password = "${var.rancher_admin_password}"
   slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.slack_channel}"
+  slack_username = "${var.slack_username}"
+  slack_icon = "${var.slack_icon}"
 }

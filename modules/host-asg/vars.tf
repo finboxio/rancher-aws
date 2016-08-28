@@ -20,3 +20,7 @@ variable "host_security_group" { default = "" }
 variable "ami" {}
 variable "version" {}
 variable "slack_webhook" {}
+variable "slack_channel" { default = "" }
+variable "slack_username" { default = "" }
+variable "slack_icon" { default = "" }
+
