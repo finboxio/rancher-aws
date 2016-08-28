@@ -18,6 +18,8 @@ module "base" {
   rancher_mysql_database = "${var.rancher_mysql_database}"
   rancher_admin_user = "${var.rancher_admin_user}"
   rancher_admin_password = "${var.rancher_admin_password}"
+  rancher_server = "${var.rancher_server}"
+  rancher_agent = "${var.rancher_agent}"
   slack_webhook = "${var.slack_webhook}"
   slack_channel = "${var.slack_channel}"
   slack_username = "${var.slack_username}"

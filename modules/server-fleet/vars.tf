@@ -24,6 +24,8 @@ variable "rancher_mysql_password" {}
 variable "rancher_mysql_database" {}
 variable "rancher_admin_user" {}
 variable "rancher_admin_password" {}
+variable "rancher_server" { default = "rancher/server:latest" }
+variable "rancher_agent" { default = "" }
 variable "slack_webhook" {}
 variable "slack_channel" { default = "" }
 variable "slack_username" { default = "" }
