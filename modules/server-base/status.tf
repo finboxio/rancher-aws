@@ -216,7 +216,7 @@ resource "aws_cloudfront_distribution" "rancher-status-distribution" {
   enabled             = true
   default_root_object = "index.html"
 
-  aliases = [ "status.rancher.finbox.io" ]
+  aliases = [ "status.${var.rancher_hostname}" ]
 
   default_cache_behavior {
     allowed_methods  = [ "GET", "HEAD", "OPTIONS" ]
