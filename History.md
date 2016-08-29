@@ -1,4 +1,37 @@
 
+0.6.0 / 2016-08-28
+==================
+
+  * update for server/agent image specification, bootstrap image version, and slack channel
+  * fix ami variables
+  * propagate rancher_server, rancher_agent
+  * fix reference to rancher hostname in status infra
+  * propagate rancher_server, rancher_agent
+  * propagate slack vars/defaults
+  * make more slack options configurable (channel, username, icon)
+  * make rancher server/agent images configurable via tf
+  * move router image into new repo (https://github.com/finboxio/rancher-lb)
+  * expose port 32810 for staging mongo instances
+  * fix treatment of host labels on register
+  * add target-specific terraform commands
+  * add staging_version output
+  * enable separate ami/image versioning
+  * fix syntax in production version definition
+  * enable environment-specific image versioning
+  * add 10m timeout before terminating stale fleet instances
+  * send host labels as attachments to slack on termination
+  * send host labels as attachments on registration
+  * add label io.rancher.host.external_dns_ip with public ip value on host registration
+  * move mongo-convoy to its own repo (https://github.com/finboxio/mongo-convoy.git)
+  * add production root dns records
+  * add analyst production infrastructure
+  * fix maintenance page requested url
+  * add finbox.io domains for maintenance and null cloudfront distributions
+  * fix maintenance page reload
+  * fix newlines for haproxy config with multiple root domains, allow 'domains' label in addition to 'domain'
+  * add port 32811 for secondary mongo and allow egress from host security group
+  * production.finbox.io dns records w/failover
+
 0.5.1 / 2016-08-17
 ==================
 
