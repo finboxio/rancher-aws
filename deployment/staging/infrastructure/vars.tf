@@ -19,6 +19,7 @@ variable "spot_price" {}
 variable "spot_allocation" {}
 
 variable "slack_webhook" {}
+variable "slack_channel" {}
 
 variable "ami" {}
 variable "version" { default = "" }

@@ -29,6 +29,7 @@ module "mongo1" {
 
   rancher_hostname = "${var.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.slack_channel}"
 
   version = "${var.version}"
   ami = "${var.ami}"

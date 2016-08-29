@@ -15,12 +15,15 @@ variable "rancher_mysql_database" {}
 variable "rancher_admin_user" {}
 variable "rancher_admin_password" {}
 variable "slack_webhook" {}
+variable "slack_channel" {}
 
 # Server Vars
 variable "certificate_id" {}
 variable "cloudfront_certificate_id" {}
 variable "server_ami_version" { default = "" }
 variable "server_image_version" { default = "" }
+variable "rancher_server" {}
+variable "rancher_agent" {}
 
 variable "server_nodes" {}
 variable "server_spot_price" {}
@@ -29,6 +32,7 @@ variable "server_spot_pools" {}
 variable "server_availability_zones" {}
 
 # Staging Vars
+variable "staging_slack_channel" {}
 variable "staging_certificate_id" {}
 variable "staging_cloudfront_certificate_id" {}
 variable "staging_ami_version" { default = "" }
@@ -45,6 +49,7 @@ variable "staging_analyst_nodes" {}
 variable "staging_analyst_spot_pools" {}
 
 # Production Vars
+variable "production_slack_channel" {}
 variable "production_certificate_id" {}
 variable "production_cloudfront_certificate_id" {}
 variable "production_ami_version" { default = "" }

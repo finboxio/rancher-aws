@@ -1,8 +1,8 @@
 data "atlas_artifact" "rancher-aws-server" {
   name = "finboxio/rancher-aws-server"
   type = "amazon.image"
-  version = "${coalesce(var.server_ami_version, var.ami_version)}"
   metadata {
+    version = "${coalesce(var.server_ami_version, var.ami_version)}"
     region = "${var.region}"
   }
 }
@@ -11,6 +11,10 @@ module "server" {
   source = "../modules/server-fleet"
 
   deployment_id = "${var.deployment_id}"
+
+  rancher_server = "${var.rancher_server}"
+  rancher_agent = "${var.rancher_agent}"
+
   version = "${coalesce(var.server_image_version, var.image_version, var.server_ami_version, var.ami_version, element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region)))}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-server.metadata_full.region), var.region))}"
 
@@ -35,13 +39,14 @@ module "server" {
   rancher_admin_user = "${var.rancher_admin_user}"
   rancher_admin_password = "${var.rancher_admin_password}"
   slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.slack_channel}"
 }
 
 data "atlas_artifact" "rancher-aws-staging-host" {
   name = "finboxio/rancher-aws-host"
   type = "amazon.image"
-  version = "${coalesce(var.staging_ami_version, var.ami_version)}"
   metadata {
+    version = "${coalesce(var.staging_ami_version, var.ami_version)}"
     region = "${var.region}"
   }
 }
@@ -52,6 +57,7 @@ module "staging" {
   deployment_id = "${module.server.deployment_id}"
   rancher_hostname = "${module.server.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.staging_slack_channel}"
   name = "Staging"
   version = "${coalesce(var.staging_image_version, var.image_version, var.staging_ami_version, var.ami_version, element(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.region), var.region)))}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-staging-host.metadata_full.region), var.region))}"
@@ -80,8 +86,8 @@ module "staging" {
 data "atlas_artifact" "rancher-aws-production-host" {
   name = "finboxio/rancher-aws-host"
   type = "amazon.image"
-  version = "${coalesce(var.production_ami_version, var.ami_version)}"
   metadata {
+    version = "${coalesce(var.production_ami_version, var.ami_version)}"
     region = "${var.region}"
   }
 }
@@ -92,6 +98,7 @@ module "production" {
   deployment_id = "${module.server.deployment_id}"
   rancher_hostname = "${module.server.rancher_hostname}"
   slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.production_slack_channel}"
   name = "Production"
   version = "${coalesce(var.production_image_version, var.image_version, var.production_ami_version, var.ami_version)}"
   ami = "${element(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-production-host.metadata_full.region), var.region))}"

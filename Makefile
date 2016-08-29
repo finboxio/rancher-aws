@@ -20,7 +20,7 @@ DEBUG_FLAG := $(shell if [ "$(DEBUG)" == "true" ]; then echo "-debug"; fi)
 SERVER_BOOTSTRAP_IMAGE=$(DOCKERHUB_USER)/rancher-aws-server:$(BUILD_VERSION)
 AGENT_BOOTSTRAP_IMAGE=$(DOCKERHUB_USER)/rancher-aws-host:$(BUILD_VERSION)
 
-RANCHER_SERVER_IMAGE=rancher/server:v1.1.2
+RANCHER_SERVER_IMAGE=finboxio/rancher-server:v1.2.0-pre2-dns
 RANCHER_AGENT_IMAGE=rancher/agent:v1.0.2
 RANCHER_AGENT_INSTANCE_IMAGE=rancher/agent-instance:v0.8.3
 
