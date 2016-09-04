@@ -70,6 +70,7 @@ module "staging" {
 
   cluster_size = "${var.staging_default_nodes}"
   availability_zones = "${var.staging_default_availability_zones}"
+  spot_price = "${var.staging_spot_price}"
   spot_pools = "${var.staging_default_spot_pools}"
   spot_allocation = "${var.staging_default_spot_allocation}"
 

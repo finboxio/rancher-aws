@@ -38,6 +38,8 @@ variable "staging_cloudfront_certificate_id" {}
 variable "staging_ami_version" { default = "" }
 variable "staging_image_version" { default = "" }
 
+variable "staging_spot_price" {}
+
 variable "staging_default_nodes" {}
 variable "staging_default_availability_zones" {}
 variable "staging_default_spot_allocation" {}
