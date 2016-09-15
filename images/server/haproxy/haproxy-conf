@@ -13,6 +13,7 @@ RANCHER_PORT=${RANCHER_PORT:-8080}
 STATS_PORT=${STATS_PORT:-9090}
 MYSQL_PORT=${MYSQL_PORT:-3306}
 MYSQLCHECK_PORT=${MYSQLCHECK_PORT:-2488}
+GRAPHITE_PORT=${GRAPHITE_PORT:-9108}
 SERF_CONTAINER=${SERF_CONTAINER:-serf}
 GRACE_PERIOD=${GRACE_PERIOD:-30}
 
@@ -61,6 +62,7 @@ if [[ ! -e /etc/haproxy/haproxy.cfg ]]; then
 		mysql: $MYSQL_PORT
 		mysqlcheck: $MYSQLCHECK_PORT
 		stats: $STATS_PORT
+		graphite: $GRAPHITE_PORT
 		health: $HAPROXY_HEALTHCHECK_PATH
 		ip: $id
 		members:
@@ -95,6 +97,7 @@ while true; do
 		mysql: $MYSQL_PORT
 		mysqlcheck: $MYSQLCHECK_PORT
 		stats: $STATS_PORT
+		graphite: $GRAPHITE_PORT
 		health: $HAPROXY_HEALTHCHECK_PATH
 		ip: $id
 		members:

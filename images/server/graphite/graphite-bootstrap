@@ -1,0 +1,5 @@
+#! /bin/sh
+
+exec /usr/bin/graphite-exporter \
+  -graphite.mapping-config=/etc/graphite/graphite-map.conf \
+  -graphite.mapping-strict-match

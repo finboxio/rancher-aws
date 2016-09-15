@@ -60,6 +60,8 @@ rancher:
     RANCHER_HOSTNAME: ${rancher_hostname}
     RANCHER_SERVER_IMAGE: ${rancher_server}
     RANCHER_AGENT_IMAGE: ${rancher_agent}
+    RANCHER_GRAPHITE_PORT: 9109
+    GRAPHITE_PORT: 9108
     MYSQLCHECK_PORT: 2488
     TERMINATOR_PORT: 2489
     HEALTHCHECK_PORT: 2490
@@ -146,6 +148,7 @@ rancher:
         - SLACK_*
         - HAPROXY_*
         - MYSQL_PORT
+        - GRAPHITE_PORT
         - MYSQLCHECK_PORT
         - RANCHER_HOSTNAME
       volumes:
@@ -203,6 +206,14 @@ rancher:
       volumes:
         - /var/run/system-docker.sock:/var/run/system-docker.sock
         - /usr/bin/system-docker:/usr/bin/system-docker
+    graphite:
+      image: finboxio/rancher-aws-server:${version}
+      entrypoint: [ '/usr/bin/graphite-bootstrap' ]
+      restart: always
+      net: host
+      labels:
+        - io.rancher.os.scope=system
+        - io.rancher.os.after=console
     shudder:
       image: finboxio/rancher-aws-server:${version}
       entrypoint: [ 'shudder' ]

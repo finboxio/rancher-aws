@@ -44,11 +44,19 @@ frontend www
   acl haproxy_path path /haproxy
   use_backend stats if haproxy_path
 
+  acl graphite_path path /graphite
+  use_backend graphite-local if graphite_path
+
   acl rancher_path path /rancher
   use_backend rancher-local if rancher_path
 
   acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}
+  acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}:443
   use_backend stats if haproxy_url
+
+  acl graphite_url hdr_end(host) -i graphite.{{ .url }}
+  acl graphite_url hdr_end(host) -i graphite.{{ .url }}:443
+  use_backend graphite if graphite_url
 
   acl rancher_url hdr(host) -i {{ .url }}
   acl rancher_url hdr(host) -i {{ .url }}:443
@@ -83,6 +91,16 @@ backend rancher
   server {{ $member }} {{ $member }}:{{ $.rancher }} check {{ if ne $index 0 -}} backup {{- end }}
   {{- end }}
 
+backend graphite
+  mode http
+  option httpchk GET /
+  http-check expect status 200
+  timeout check 2s
+  default-server inter 3s fall 3 rise 2
+  {{- range $index, $member := .members }}
+  server {{ $member }} {{ $member }}:{{ $.graphite }} check {{ if ne $index 0 -}} backup {{- end }}
+  {{- end }}
+
 backend haproxy
   mode http
   option httpchk GET {{ .health }}
@@ -109,6 +127,14 @@ backend rancher-local
   timeout check 2s
   default-server inter 3s fall 3 rise 2
   server {{ .ip }} 127.0.0.1:{{ .rancher }} check
+
+backend graphite-local
+  mode http
+  option httpchk GET /
+  http-check expect status 200
+  timeout check 2s
+  default-server inter 3s fall 3 rise 2
+  server {{ .ip }} 127.0.0.1:{{ .graphite }} check
 
 backend haproxy-local
   mode http

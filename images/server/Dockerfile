@@ -67,7 +67,7 @@ RUN curl -L https://github.com/rancher/convoy/releases/download/v${CONVOY_VERSIO
     && cp convoy/convoy convoy/convoy-pdata_tools /usr/bin/ \
     && rm -rf convoy.tar.gz convoy
 
-# gotpl && checkup installation
+# gotpl && checkup && graphite-exporter installation
 ENV GO_VERSION 1.6.3
 ENV CHECKUP_VERSION 6c6ae13e5576edcf386aaf2c99b2b7537b95d84f
 RUN set -x \
@@ -75,13 +75,21 @@ RUN set -x \
     && mkdir -p /usr/local/go /usr/src/go \
     && tar -xzf go.tar.gz -C /usr/local/go --strip-components=1 \
     && export GOPATH=/usr/src/go \
+
     && /usr/local/go/bin/go get github.com/tsg/gotpl \
     && mv /usr/src/go/bin/gotpl /usr/bin/gotpl \
+
     && /usr/local/go/bin/go get github.com/finboxio/checkup \
     && /usr/local/go/bin/go get github.com/spf13/cobra \
     && cd $GOPATH/src/github.com/finboxio/checkup \
     && /usr/local/go/bin/go build -o checkup cmd/checkup/main.go \
     && mv checkup /usr/bin/checkup \
+
+    && /usr/local/go/bin/go get github.com/prometheus/graphite_exporter \
+    && cd $GOPATH/src/github.com/prometheus/graphite_exporter \
+    && /usr/local/go/bin/go build -o graphite-exporter \
+    && mv graphite-exporter /usr/bin/graphite-exporter \
+
     && rm -rf go.tar.gz /usr/local/go /usr/src/go
 
 # rsyslog installation
@@ -125,4 +133,7 @@ RUN cp /var/lib/aws/slack/slack /usr/bin/slack \
     && cp /var/lib/aws/healthcheck/healthcheck-bootstrap /usr/bin/healthcheck-bootstrap \
     && cp /var/lib/aws/healthcheck/service /etc/healthcheck/service \
     && cp /var/lib/aws/cluster-monitor/cluster-monitor /usr/bin/cluster-monitor \
-    && cp /var/lib/aws/fleet-monitor/fleet-monitor /usr/bin/fleet-monitor
+    && cp /var/lib/aws/fleet-monitor/fleet-monitor /usr/bin/fleet-monitor \
+    && mkdir -p /etc/graphite \
+    && cp /var/lib/aws/graphite/graphite-bootstrap /usr/bin/graphite-bootstrap \
+    && cp /var/lib/aws/graphite/graphite-map.conf /etc/graphite/graphite-map.conf
