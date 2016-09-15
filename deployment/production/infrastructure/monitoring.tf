@@ -4,7 +4,7 @@ resource "aws_security_group" "rancher-production-monitoring-sg" {
   ingress {
     from_port = 9109
     to_port = 9109
-    protocol = "-1"
+    protocol = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
