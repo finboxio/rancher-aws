@@ -1,4 +1,13 @@
 
+0.6.1 / 2016-09-15
+==================
+
+  * run server with bridge network instead of host, add graphite options
+  * add monitoring and elasticsearch nodes to prod deployment
+  * remove mongo images (now at https://github.com/finboxio/mongo
+  * make global staging spot price configurable
+  * add slack channel to prod mongo infrastructure
+
 0.6.0 / 2016-08-28
 ==================
 
