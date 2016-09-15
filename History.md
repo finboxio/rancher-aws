@@ -1,4 +1,9 @@
 
+0.7.1 / 2016-09-15
+==================
+
+  * add rancher haproxy support for hostnames with :80 at end
+
 0.7.0 / 2016-09-15
 ==================
 
