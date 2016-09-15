@@ -123,6 +123,14 @@ module "production" {
   mongo1_spot_pools = "${var.production_mongo1_spot_pools}"
   mongo2_spot_pools = "${var.production_mongo2_spot_pools}"
 
+  elasticsearch1_spot_pools = "${var.production_elasticsearch1_spot_pools}"
+  elasticsearch2_spot_pools = "${var.production_elasticsearch2_spot_pools}"
+
   analyst_cluster_size = "${var.production_analyst_nodes}"
   analyst_spot_pools = "${var.production_analyst_spot_pools}"
+
+  monitoring_nodes = "${var.production_monitoring_nodes}"
+  monitoring_spot_allocation = "${var.production_monitoring_spot_allocation}"
+  monitoring_spot_price = "${var.production_monitoring_spot_price}"
+  monitoring_spot_pools = "${var.production_monitoring_spot_pools}"
 }

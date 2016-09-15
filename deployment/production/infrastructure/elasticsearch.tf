@@ -1,12 +1,5 @@
-resource "aws_security_group" "rancher-production-mongo-sg" {
-  name = "rancher-finboxio-production-mongo-host-sg"
-
-  ingress {
-    from_port = 32810
-    to_port = 32810
-    protocol = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_security_group" "rancher-production-elasticsearch-sg" {
+  name = "rancher-finboxio-production-elasticsearch-host-sg"
 
   egress {
     from_port = 0
@@ -16,14 +9,14 @@ resource "aws_security_group" "rancher-production-mongo-sg" {
   }
 }
 
-module "mongo1" {
+module "elasticsearch1" {
   source = "../../../modules/host-fleet"
   deployment_id = "${var.deployment_id}"
   environment = "${var.name}"
-  group = "mongo1"
+  group = "elasticsearch1"
   type = "cattle"
 
-  spot_pools = "${var.mongo1_spot_pools}"
+  spot_pools = "${var.elasticsearch1_spot_pools}"
 
   cluster_size = "1"
   spot_allocation = "lowestPrice"
@@ -31,7 +24,7 @@ module "mongo1" {
   ssh_keypair = "${var.ssh_keypair}"
   shudder_sqs_url = "${var.shudder_sqs_url}"
   config_bucket = "${var.config_bucket}"
-  host_security_group = "${aws_security_group.rancher-production-mongo-sg.id}"
+  host_security_group = "${aws_security_group.rancher-production-elasticsearch-sg.id}"
   server_security_group = "${var.server_security_group}"
 
   rancher_hostname = "${var.rancher_hostname}"
@@ -42,14 +35,14 @@ module "mongo1" {
   ami = "${var.ami}"
 }
 
-module "mongo2" {
+module "elasticsearch2" {
   source = "../../../modules/host-fleet"
   deployment_id = "${var.deployment_id}"
   environment = "${var.name}"
-  group = "mongo2"
+  group = "elasticsearch2"
   type = "cattle"
 
-  spot_pools = "${var.mongo2_spot_pools}"
+  spot_pools = "${var.elasticsearch2_spot_pools}"
 
   cluster_size = "1"
   spot_allocation = "lowestPrice"
@@ -57,7 +50,7 @@ module "mongo2" {
   ssh_keypair = "${var.ssh_keypair}"
   shudder_sqs_url = "${var.shudder_sqs_url}"
   config_bucket = "${var.config_bucket}"
-  host_security_group = "${aws_security_group.rancher-production-mongo-sg.id}"
+  host_security_group = "${aws_security_group.rancher-production-elasticsearch-sg.id}"
   server_security_group = "${var.server_security_group}"
 
   rancher_hostname = "${var.rancher_hostname}"

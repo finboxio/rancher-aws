@@ -57,13 +57,6 @@ resource "aws_security_group" "rancher-host-sg" {
     cidr_blocks = [ "0.0.0.0/0" ]
   }
 
-  ingress {
-    from_port = 32810
-    to_port = 32810
-    protocol = "TCP"
-    cidr_blocks = [ "0.0.0.0/0" ]
-  }
-
   egress {
     from_port = 0
     to_port = 0
@@ -85,13 +78,6 @@ resource "aws_elb" "rancher-elb" {
     instance_port     = 80
     instance_protocol = "tcp"
     lb_port           = 80
-    lb_protocol       = "tcp"
-  }
-
-  listener {
-    instance_port     = 32810
-    instance_protocol = "tcp"
-    lb_port           = 32810
     lb_protocol       = "tcp"
   }
 

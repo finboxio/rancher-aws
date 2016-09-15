@@ -27,5 +27,13 @@ variable "version" { default = "" }
 variable "mongo1_spot_pools" {}
 variable "mongo2_spot_pools" {}
 
+variable "elasticsearch1_spot_pools" {}
+variable "elasticsearch2_spot_pools" {}
+
 variable "analyst_cluster_size" {}
 variable "analyst_spot_pools" {}
+
+variable "monitoring_nodes" {}
+variable "monitoring_spot_allocation" {}
+variable "monitoring_spot_pools" {}
+variable "monitoring_spot_price" {}

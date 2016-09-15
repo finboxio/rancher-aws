@@ -66,5 +66,13 @@ variable "production_default_spot_pools" {}
 variable "production_mongo1_spot_pools" {}
 variable "production_mongo2_spot_pools" {}
 
+variable "production_elasticsearch1_spot_pools" {}
+variable "production_elasticsearch2_spot_pools" {}
+
+variable "production_monitoring_nodes" {}
+variable "production_monitoring_spot_allocation" {}
+variable "production_monitoring_spot_price" {}
+variable "production_monitoring_spot_pools" {}
+
 variable "production_analyst_nodes" {}
 variable "production_analyst_spot_pools" {}
