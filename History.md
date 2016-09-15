@@ -1,4 +1,10 @@
 
+0.6.2 / 2016-09-15
+==================
+
+  * expose graphite port
+  * fix --port => -p in rancher server bootstrap
+
 0.6.1 / 2016-09-15
 ==================
 
