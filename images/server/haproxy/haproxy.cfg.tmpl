@@ -51,14 +51,17 @@ frontend www
   use_backend rancher-local if rancher_path
 
   acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}
+  acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}:80
   acl haproxy_url hdr_end(host) -i haproxy.{{ .url }}:443
   use_backend stats if haproxy_url
 
   acl graphite_url hdr_end(host) -i graphite.{{ .url }}
+  acl graphite_url hdr_end(host) -i graphite.{{ .url }}:80
   acl graphite_url hdr_end(host) -i graphite.{{ .url }}:443
   use_backend graphite if graphite_url
 
   acl rancher_url hdr(host) -i {{ .url }}
+  acl rancher_url hdr(host) -i {{ .url }}:80
   acl rancher_url hdr(host) -i {{ .url }}:443
   use_backend rancher if rancher_url
 
