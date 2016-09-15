@@ -1,6 +1,13 @@
 resource "aws_security_group" "rancher-production-monitoring-sg" {
   name = "rancher-finboxio-production-monitoring-host-sg"
 
+  ingress {
+    from_port = 9109
+    to_port = 9109
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port = 0
     to_port = 0
