@@ -221,7 +221,7 @@ rancher=$(docker inspect rancher | jq -r .[].Id)
 if [[ "$RANCHER_ACCESS_KEY" != "" && "$api_key" == "$RANCHER_ACCESS_KEY" && "$rancher" == "" ]]; then
   id=$(docker run -d --restart=always \
     --hostname $instance \
-    --port 8080:8080 \
+    -p 8080:8080 \
     --name rancher \
     -e CATTLE_DB_CATTLE_MYSQL_PORT=$HAPROXY_MYSQL_PORT \
     -e CATTLE_DB_CATTLE_MYSQL_HOST=$self \
