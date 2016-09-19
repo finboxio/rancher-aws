@@ -42,6 +42,43 @@ module "server" {
   slack_channel = "${var.slack_channel}"
 }
 
+data "atlas_artifact" "rancher-aws-dev-host" {
+  name = "finboxio/rancher-aws-host"
+  type = "amazon.image"
+  metadata {
+    version = "${coalesce(var.dev_ami_version, var.ami_version)}"
+    region = "${var.region}"
+  }
+}
+
+module "dev" {
+  source = "./dev/infrastructure"
+
+  deployment_id = "${module.server.deployment_id}"
+  rancher_hostname = "${module.server.rancher_hostname}"
+  slack_webhook = "${var.slack_webhook}"
+  slack_channel = "${var.dev_slack_channel}"
+  name = "Development"
+  version = "${coalesce(var.dev_image_version, var.image_version, var.dev_ami_version, var.ami_version, element(split(",", data.atlas_artifact.rancher-aws-dev-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-dev-host.metadata_full.region), var.region)))}"
+  ami = "${element(split(",", data.atlas_artifact.rancher-aws-dev-host.metadata_full.ami_id), index(split(",", data.atlas_artifact.rancher-aws-dev-host.metadata_full.region), var.region))}"
+
+  region = "${var.region}"
+  ssh_keypair = "${var.ssh_keypair}"
+  zone_id = "${var.zone_id}"
+  certificate_id = "${var.dev_certificate_id}"
+  cloudfront_certificate_id = "${var.dev_cloudfront_certificate_id}"
+
+  cluster_size = "${var.dev_default_nodes}"
+  availability_zones = "${var.dev_default_availability_zones}"
+  spot_price = "${var.dev_spot_price}"
+  spot_pools = "${var.dev_default_spot_pools}"
+  spot_allocation = "${var.dev_default_spot_allocation}"
+
+  shudder_sqs_url = "${module.server.shudder_sqs_url}"
+  config_bucket = "${module.server.config_bucket}"
+  server_security_group = "${module.server.internal_security_group}"
+}
+
 data "atlas_artifact" "rancher-aws-staging-host" {
   name = "finboxio/rancher-aws-host"
   type = "amazon.image"

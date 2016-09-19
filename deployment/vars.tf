@@ -31,6 +31,20 @@ variable "server_spot_allocation" {}
 variable "server_spot_pools" {}
 variable "server_availability_zones" {}
 
+# Dev Vars
+variable "dev_slack_channel" {}
+variable "dev_certificate_id" {}
+variable "dev_cloudfront_certificate_id" {}
+variable "dev_ami_version" { default = "" }
+variable "dev_image_version" { default = "" }
+
+variable "dev_spot_price" {}
+
+variable "dev_default_nodes" {}
+variable "dev_default_availability_zones" {}
+variable "dev_default_spot_allocation" {}
+variable "dev_default_spot_pools" {}
+
 # Staging Vars
 variable "staging_slack_channel" {}
 variable "staging_certificate_id" {}
