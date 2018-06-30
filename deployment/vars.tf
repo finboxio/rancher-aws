@@ -90,3 +90,6 @@ variable "production_monitoring_spot_pools" {}
 
 variable "production_analyst_nodes" {}
 variable "production_analyst_spot_pools" {}
+
+variable "production_prerender_nodes" {}
+variable "production_prerender_spot_pools" {}

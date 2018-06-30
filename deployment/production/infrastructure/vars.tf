@@ -33,6 +33,9 @@ variable "elasticsearch2_spot_pools" {}
 variable "analyst_cluster_size" {}
 variable "analyst_spot_pools" {}
 
+variable "prerender_cluster_size" {}
+variable "prerender_spot_pools" {}
+
 variable "monitoring_nodes" {}
 variable "monitoring_spot_allocation" {}
 variable "monitoring_spot_pools" {}

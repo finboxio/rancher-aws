@@ -88,6 +88,12 @@ resource "aws_cloudfront_distribution" "rancher-production-maintenance-distribut
     response_code = 503
     response_page_path = "/index.html"
   }
+
+  logging_config {
+    bucket = "finboxio-access-logs.s3.amazonaws.com"
+    include_cookies = true
+    prefix = "maintenance-access-logs/"
+  }
 }
 
 resource "aws_cloudfront_distribution" "rancher-production-404-distribution" {

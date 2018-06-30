@@ -166,6 +166,9 @@ module "production" {
   analyst_cluster_size = "${var.production_analyst_nodes}"
   analyst_spot_pools = "${var.production_analyst_spot_pools}"
 
+  prerender_cluster_size = "${var.production_prerender_nodes}"
+  prerender_spot_pools = "${var.production_prerender_spot_pools}"
+
   monitoring_nodes = "${var.production_monitoring_nodes}"
   monitoring_spot_allocation = "${var.production_monitoring_spot_allocation}"
   monitoring_spot_price = "${var.production_monitoring_spot_price}"
